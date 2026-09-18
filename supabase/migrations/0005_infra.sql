@@ -101,6 +101,13 @@ $fn$;
 revoke all on public.rate_limit_counters from anon, authenticated;
 revoke all on public.audit_log from anon, authenticated;
 
+-- Politica de RLS opera EM CIMA do grant de tabela, nao no lugar dele.
+-- Sem este grant, a politica audit_log_select_admin nunca seria alcancada
+-- e o log de auditoria seria so-escrita: nem o administrador conseguiria
+-- le-lo. A leitura de fato continua restrita ao administrador -- quem
+-- estreita e a politica; este grant so abre a porta para ela decidir.
+grant select on public.audit_log to authenticated;
+
 grant execute on function public.check_rate_limit(text, text, integer, integer)
   to anon, authenticated;
 grant execute on function public.record_audit(text, text, uuid, uuid, jsonb, inet)
