@@ -45,6 +45,7 @@ O plano foi escrito supondo `npx supabase db reset` contra o Postgres local. **M
 - O **Supabase local é o banco de prova**: cada migration é aplicada e verificada lá primeiro, e só depois entregue testada para colar na nuvem. Onde o plano diz `npx supabase db reset`, leia "aplicar o arquivo no banco de prova".
 - O acesso ao banco de prova é `docker exec -i supabase_db_nfc-menu psql -U postgres -d postgres` — `psql` não está instalado solto nesta máquina. É o `PSQL` citado nas tarefas.
 - **Sem lint** como portão de verificação, também por decisão do cliente. A verificação de código é `pnpm exec tsc --noEmit`.
+- **O que se cola no SQL Editor é `supabase/schema.sql`**, não os arquivos numerados. Ele é gerado por `bash supabase/build-schema.sh` concatenando as migrations em ordem, e é regenerado a cada migration nova. Um arquivo único elimina a chance de colar na ordem errada, de pular um, ou de colar uma versão desatualizada — que foi exatamente o que aconteceu na primeira tentativa. As migrations numeradas continuam existindo para leitura e histórico no git.
 
 ## Pré-requisitos
 
