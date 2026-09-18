@@ -17,7 +17,7 @@
 
 with alvo as (
   -- >>> TROQUE O E-MAIL ABAIXO PELO SEU <<<
-  select 'seu-email-aqui@exemplo.com'::text as email
+  select 'eduardozamai@gmail.com'::text as email
 )
 insert into public.platform_admins (user_id)
 select u.id
