@@ -494,3 +494,581 @@ as $fn$
   );
 $fn$;
 
+
+-- #####################################################################
+-- ### 0005_infra.sql
+-- #####################################################################
+
+-- =====================================================================
+-- 0005 — Infraestrutura: rate limit e log de auditoria
+--
+-- Rode DEPOIS do 0004. Idempotente: pode rodar de novo sem quebrar.
+--
+-- As duas tabelas aqui nao sao acessiveis por ninguem: RLS ligada sem
+-- politica nenhuma, mais REVOKE explicito. So as funcoes SECURITY DEFINER
+-- deste arquivo conseguem toca-las.
+-- =====================================================================
+
+create table if not exists public.rate_limit_counters (
+  bucket text not null,
+  identifier text not null,
+  window_start timestamptz not null,
+  hits integer not null default 0,
+  primary key (bucket, identifier, window_start)
+);
+
+create index if not exists rate_limit_counters_window_idx
+  on public.rate_limit_counters (window_start);
+
+create table if not exists public.audit_log (
+  id uuid primary key default gen_random_uuid(),
+  actor_id uuid references public.profiles (id),
+  action text not null,
+  subject_type text not null,
+  subject_id uuid,
+  restaurant_id uuid references public.restaurants (id) on delete set null,
+  metadata jsonb not null default '{}'::jsonb,
+  ip inet,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists audit_log_restaurant_idx
+  on public.audit_log (restaurant_id, created_at desc);
+create index if not exists audit_log_actor_idx
+  on public.audit_log (actor_id, created_at desc);
+
+-- Janela fixa. O UPSERT e atomico: duas requisicoes simultaneas nunca
+-- conseguem ler o mesmo contador e gravar o mesmo incremento, que e a
+-- falha classica de rate limit feito em duas etapas na aplicacao.
+create or replace function public.check_rate_limit(
+  p_bucket text,
+  p_identifier text,
+  p_max integer,
+  p_window_seconds integer
+)
+returns boolean
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $fn$
+declare
+  v_window_start timestamptz;
+  v_hits integer;
+begin
+  v_window_start := to_timestamp(
+    floor(extract(epoch from now()) / p_window_seconds) * p_window_seconds
+  );
+
+  insert into public.rate_limit_counters (bucket, identifier, window_start, hits)
+  values (p_bucket, p_identifier, v_window_start, 1)
+  on conflict (bucket, identifier, window_start)
+    do update set hits = rate_limit_counters.hits + 1
+  returning hits into v_hits;
+
+  -- Limpeza oportunista: em cerca de 1% das chamadas, remove janelas
+  -- velhas. Evita crescimento indefinido da tabela sem exigir rotina
+  -- agendada, que seria mais uma peca para manter e esquecer.
+  if random() < 0.01 then
+    delete from public.rate_limit_counters
+    where window_start < now() - interval '1 day';
+  end if;
+
+  return v_hits <= p_max;
+end;
+$fn$;
+
+create or replace function public.record_audit(
+  p_action text,
+  p_subject_type text,
+  p_subject_id uuid default null,
+  p_restaurant_id uuid default null,
+  p_metadata jsonb default '{}'::jsonb,
+  p_ip inet default null
+)
+returns void
+language sql
+volatile
+security definer
+set search_path = ''
+as $fn$
+  insert into public.audit_log
+    (actor_id, action, subject_type, subject_id, restaurant_id, metadata, ip)
+  values
+    ((select auth.uid()), p_action, p_subject_type, p_subject_id,
+     p_restaurant_id, p_metadata, p_ip);
+$fn$;
+
+revoke all on public.rate_limit_counters from anon, authenticated;
+revoke all on public.audit_log from anon, authenticated;
+
+grant execute on function public.check_rate_limit(text, text, integer, integer)
+  to anon, authenticated;
+grant execute on function public.record_audit(text, text, uuid, uuid, jsonb, inet)
+  to authenticated;
+
+
+-- #####################################################################
+-- ### 0006_rls.sql
+-- #####################################################################
+
+-- =====================================================================
+-- 0006 — Row Level Security: a ultima linha de defesa
+--
+-- Rode DEPOIS do 0005. Idempotente: cada politica e removida antes de ser
+-- recriada, entao rodar de novo apenas reescreve as mesmas regras.
+--
+-- Depois desta migracao, TODA tabela nega por padrao. Ausencia de politica
+-- nao e permissao esquecida: e negacao. So passa o que esta escrito aqui.
+-- =====================================================================
+
+alter table public.profiles            enable row level security;
+alter table public.platform_admins     enable row level security;
+alter table public.restaurants         enable row level security;
+alter table public.memberships         enable row level security;
+alter table public.invites             enable row level security;
+alter table public.menu_tags           enable row level security;
+alter table public.menu_categories     enable row level security;
+alter table public.menu_items          enable row level security;
+alter table public.menu_item_variants  enable row level security;
+alter table public.menu_item_media     enable row level security;
+alter table public.audit_log           enable row level security;
+alter table public.rate_limit_counters enable row level security;
+
+-- profiles -------------------------------------------------------------
+drop policy if exists profiles_select on public.profiles;
+create policy profiles_select on public.profiles
+  for select to authenticated
+  using (id = (select auth.uid()) or public.is_platform_admin());
+
+drop policy if exists profiles_update_self on public.profiles;
+create policy profiles_update_self on public.profiles
+  for update to authenticated
+  using (id = (select auth.uid()))
+  with check (id = (select auth.uid()));
+
+-- platform_admins ------------------------------------------------------
+-- Sem INSERT, UPDATE ou DELETE: nao existe caminho na aplicacao que
+-- promova alguem a administrador. So o seed manual de bootstrap.
+drop policy if exists platform_admins_select on public.platform_admins;
+create policy platform_admins_select on public.platform_admins
+  for select to authenticated
+  using (public.is_platform_admin());
+
+-- restaurants ----------------------------------------------------------
+drop policy if exists restaurants_select_public on public.restaurants;
+create policy restaurants_select_public on public.restaurants
+  for select to anon, authenticated
+  using (status = 'active' and deleted_at is null);
+
+drop policy if exists restaurants_select_member on public.restaurants;
+create policy restaurants_select_member on public.restaurants
+  for select to authenticated
+  using (public.is_member(id) or public.is_platform_admin());
+
+drop policy if exists restaurants_insert_admin on public.restaurants;
+create policy restaurants_insert_admin on public.restaurants
+  for insert to authenticated
+  with check (public.is_platform_admin());
+
+drop policy if exists restaurants_update on public.restaurants;
+create policy restaurants_update on public.restaurants
+  for update to authenticated
+  using (public.is_owner(id) or public.is_platform_admin())
+  with check (public.is_owner(id) or public.is_platform_admin());
+
+-- Sem politica de DELETE: remover restaurante e impossivel pela
+-- aplicacao. A remocao e logica, via deleted_at, e so pela plataforma.
+
+-- memberships ----------------------------------------------------------
+drop policy if exists memberships_select on public.memberships;
+create policy memberships_select on public.memberships
+  for select to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists memberships_insert_admin on public.memberships;
+create policy memberships_insert_admin on public.memberships
+  for insert to authenticated
+  with check (public.is_platform_admin());
+
+drop policy if exists memberships_update_admin on public.memberships;
+create policy memberships_update_admin on public.memberships
+  for update to authenticated
+  using (public.is_platform_admin())
+  with check (public.is_platform_admin());
+
+drop policy if exists memberships_delete on public.memberships;
+create policy memberships_delete on public.memberships
+  for delete to authenticated
+  using (public.is_owner(restaurant_id) or public.is_platform_admin());
+
+-- invites --------------------------------------------------------------
+drop policy if exists invites_select on public.invites;
+create policy invites_select on public.invites
+  for select to authenticated
+  using (public.is_owner(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists invites_insert_admin on public.invites;
+create policy invites_insert_admin on public.invites
+  for insert to authenticated
+  with check (public.is_platform_admin());
+
+drop policy if exists invites_update_admin on public.invites;
+create policy invites_update_admin on public.invites
+  for update to authenticated
+  using (public.is_platform_admin())
+  with check (public.is_platform_admin());
+
+-- menu_tags ------------------------------------------------------------
+-- Anonimo nao enxerga NADA aqui. A resolucao de /t/{token} passa pela
+-- funcao resolve_menu_tag do 0007, o que impede enumerar as plaquinhas
+-- de todos os restaurantes.
+drop policy if exists menu_tags_select_member on public.menu_tags;
+create policy menu_tags_select_member on public.menu_tags
+  for select to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists menu_tags_insert_admin on public.menu_tags;
+create policy menu_tags_insert_admin on public.menu_tags
+  for insert to authenticated
+  with check (public.is_platform_admin());
+
+drop policy if exists menu_tags_update_member on public.menu_tags;
+create policy menu_tags_update_member on public.menu_tags
+  for update to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin())
+  with check (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists menu_tags_delete_admin on public.menu_tags;
+create policy menu_tags_delete_admin on public.menu_tags
+  for delete to authenticated
+  using (public.is_platform_admin());
+
+-- menu_categories ------------------------------------------------------
+drop policy if exists menu_categories_select_public on public.menu_categories;
+create policy menu_categories_select_public on public.menu_categories
+  for select to anon, authenticated
+  using (is_visible and public.is_restaurant_public(restaurant_id));
+
+drop policy if exists menu_categories_select_member on public.menu_categories;
+create policy menu_categories_select_member on public.menu_categories
+  for select to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists menu_categories_insert on public.menu_categories;
+create policy menu_categories_insert on public.menu_categories
+  for insert to authenticated
+  with check (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists menu_categories_update on public.menu_categories;
+create policy menu_categories_update on public.menu_categories
+  for update to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin())
+  with check (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists menu_categories_delete on public.menu_categories;
+create policy menu_categories_delete on public.menu_categories
+  for delete to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin());
+
+-- menu_items -----------------------------------------------------------
+drop policy if exists menu_items_select_public on public.menu_items;
+create policy menu_items_select_public on public.menu_items
+  for select to anon, authenticated
+  using (
+    is_visible
+    and public.is_restaurant_public(restaurant_id)
+    and public.is_category_visible(category_id)
+  );
+
+drop policy if exists menu_items_select_member on public.menu_items;
+create policy menu_items_select_member on public.menu_items
+  for select to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists menu_items_insert on public.menu_items;
+create policy menu_items_insert on public.menu_items
+  for insert to authenticated
+  with check (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists menu_items_update on public.menu_items;
+create policy menu_items_update on public.menu_items
+  for update to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin())
+  with check (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists menu_items_delete on public.menu_items;
+create policy menu_items_delete on public.menu_items
+  for delete to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin());
+
+-- menu_item_variants ---------------------------------------------------
+drop policy if exists menu_item_variants_select_public on public.menu_item_variants;
+create policy menu_item_variants_select_public on public.menu_item_variants
+  for select to anon, authenticated
+  using (public.is_menu_item_public(item_id));
+
+drop policy if exists menu_item_variants_select_member on public.menu_item_variants;
+create policy menu_item_variants_select_member on public.menu_item_variants
+  for select to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists menu_item_variants_insert on public.menu_item_variants;
+create policy menu_item_variants_insert on public.menu_item_variants
+  for insert to authenticated
+  with check (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists menu_item_variants_update on public.menu_item_variants;
+create policy menu_item_variants_update on public.menu_item_variants
+  for update to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin())
+  with check (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists menu_item_variants_delete on public.menu_item_variants;
+create policy menu_item_variants_delete on public.menu_item_variants
+  for delete to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin());
+
+-- menu_item_media ------------------------------------------------------
+drop policy if exists menu_item_media_select_public on public.menu_item_media;
+create policy menu_item_media_select_public on public.menu_item_media
+  for select to anon, authenticated
+  using (public.is_menu_item_public(item_id));
+
+drop policy if exists menu_item_media_select_member on public.menu_item_media;
+create policy menu_item_media_select_member on public.menu_item_media
+  for select to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists menu_item_media_insert on public.menu_item_media;
+create policy menu_item_media_insert on public.menu_item_media
+  for insert to authenticated
+  with check (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists menu_item_media_update on public.menu_item_media;
+create policy menu_item_media_update on public.menu_item_media
+  for update to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin())
+  with check (public.is_member(restaurant_id) or public.is_platform_admin());
+
+drop policy if exists menu_item_media_delete on public.menu_item_media;
+create policy menu_item_media_delete on public.menu_item_media
+  for delete to authenticated
+  using (public.is_member(restaurant_id) or public.is_platform_admin());
+
+-- audit_log ------------------------------------------------------------
+-- Sem politica de INSERT: so record_audit escreve aqui. Sem UPDATE nem
+-- DELETE: log que pode ser editado nao serve como log.
+drop policy if exists audit_log_select_admin on public.audit_log;
+create policy audit_log_select_admin on public.audit_log
+  for select to authenticated
+  using (public.is_platform_admin());
+
+-- rate_limit_counters --------------------------------------------------
+-- Nenhuma politica, de proposito. RLS ligada sem politica nega tudo, e o
+-- acesso acontece exclusivamente por check_rate_limit.
+
+
+-- #####################################################################
+-- ### 0007_privileged.sql
+-- #####################################################################
+
+-- =====================================================================
+-- 0007 — Operacoes privilegiadas: convite e plaquinha
+--
+-- Rode DEPOIS do 0006. Idempotente.
+--
+-- Estas funcoes existem para que a chave service_role NUNCA precise
+-- entrar na aplicacao. Cada uma tem escopo estreito, e escopo estreito e
+-- auditavel; uma chave que ignora toda a RLS nao e.
+-- =====================================================================
+
+-- Recebe o token EM CLARO e calcula o hash aqui dentro. Isso e essencial e
+-- nao e detalhe: se a funcao aceitasse o hash, um vazamento do banco
+-- entregaria hashes diretamente utilizaveis, anulando todo o motivo de
+-- guardar hash em vez do token.
+--
+-- Retorna ZERO linhas para token desconhecido, expirado, revogado OU ja
+-- usado. As quatro situacoes sao indistinguiveis de fora, o que impede
+-- descobrir que um convite existe.
+drop function if exists public.preview_invite(text);
+create function public.preview_invite(p_token text)
+returns table (restaurant_name text, invite_role public.membership_role)
+language sql
+stable
+security definer
+set search_path = ''
+as $fn$
+  select r.name, i.role
+  from public.invites i
+  join public.restaurants r on r.id = i.restaurant_id
+  where i.token_hash = sha256(convert_to(p_token, 'UTF8'))
+    and i.expires_at > now()
+    and i.redeemed_at is null
+    and i.revoked_at is null;
+$fn$;
+
+drop function if exists public.redeem_invite(text);
+create function public.redeem_invite(p_token text)
+returns uuid
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $fn$
+declare
+  v_uid uuid := (select auth.uid());
+  v_email text;
+  v_invite public.invites%rowtype;
+begin
+  if v_uid is null then
+    raise exception 'convite invalido' using errcode = '42501';
+  end if;
+
+  select u.email into v_email from auth.users u where u.id = v_uid;
+
+  -- A corrida entre dois cliques simultaneos no mesmo link e resolvida
+  -- aqui pelo proprio Postgres: so uma transacao encontra redeemed_at
+  -- ainda nulo. Sem lock na aplicacao, sem janela entre checar e gravar.
+  update public.invites i
+     set redeemed_at = now(),
+         redeemed_by = v_uid
+   where i.token_hash = sha256(convert_to(p_token, 'UTF8'))
+     and i.expires_at > now()
+     and i.redeemed_at is null
+     and i.revoked_at is null
+     and (i.email is null or lower(i.email) = lower(v_email))
+  returning i.* into v_invite;
+
+  -- Mensagem unica para todos os modos de falha, pela mesma razao de
+  -- preview_invite: nao revelar qual condicao falhou.
+  if not found then
+    raise exception 'convite invalido' using errcode = '42501';
+  end if;
+
+  insert into public.memberships (restaurant_id, user_id, role)
+  values (v_invite.restaurant_id, v_uid, v_invite.role)
+  on conflict (restaurant_id, user_id) do nothing;
+
+  perform public.record_audit(
+    'invite.redeemed',
+    'invite',
+    v_invite.id,
+    v_invite.restaurant_id,
+    jsonb_build_object('role', v_invite.role)
+  );
+
+  return v_invite.restaurant_id;
+end;
+$fn$;
+
+-- Resolve a plaquinha sem dar a anonimos qualquer leitura sobre menu_tags,
+-- o que permitiria enumerar as plaquinhas de todos os restaurantes.
+drop function if exists public.resolve_menu_tag(text);
+create function public.resolve_menu_tag(p_token text)
+returns table (restaurant_slug text, tag_label text)
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $fn$
+begin
+  return query
+    update public.menu_tags t
+       set last_seen_at = now()
+      from public.restaurants r
+     where r.id = t.restaurant_id
+       and t.public_token = p_token
+       and t.is_active
+       and r.status = 'active'
+       and r.deleted_at is null
+    returning r.slug, t.label;
+end;
+$fn$;
+
+grant execute on function public.preview_invite(text) to anon, authenticated;
+grant execute on function public.redeem_invite(text) to authenticated;
+grant execute on function public.resolve_menu_tag(text) to anon, authenticated;
+
+
+-- #####################################################################
+-- ### 0008_storage.sql
+-- #####################################################################
+
+-- =====================================================================
+-- 0008 — Storage: buckets de midia e fronteira por prefixo de caminho
+--
+-- Rode DEPOIS do 0007. Idempotente.
+-- =====================================================================
+
+-- Dois buckets em vez de um porque o limite de tamanho e a lista de tipos
+-- aceitos sao configuracao DO BUCKET, aplicada pelo proprio Supabase no
+-- servidor -- nao dependem de codigo nosso. Com um bucket so, o teto teria
+-- que ser o maior dos dois e alguem subiria uma "foto" de 10 MB.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values
+  ('menu-images', 'menu-images', true, 5242880,
+   array['image/jpeg', 'image/png', 'image/webp', 'image/avif']),
+  ('menu-videos', 'menu-videos', true, 10485760,
+   array['video/mp4', 'video/webm'])
+on conflict (id) do update set
+  public             = excluded.public,
+  file_size_limit    = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+-- Extrai o id do restaurante do prefixo do caminho. Devolve null quando o
+-- caminho nao comeca com um uuid, para que a politica NEGUE em vez de
+-- levantar erro de conversao -- politica que estoura em vez de negar e
+-- uma falha aberta disfarcada de erro.
+create or replace function public.restaurant_id_from_storage_path(p_name text)
+returns uuid
+language plpgsql
+immutable
+set search_path = ''
+as $fn$
+declare
+  v_first text := split_part(p_name, '/', 1);
+begin
+  return v_first::uuid;
+exception when others then
+  return null;
+end;
+$fn$;
+
+-- Leitura publica: o cardapio e publico.
+drop policy if exists menu_media_select_public on storage.objects;
+create policy menu_media_select_public on storage.objects
+  for select to anon, authenticated
+  using (bucket_id in ('menu-images', 'menu-videos'));
+
+-- Escrita: o prefixo do caminho E a fronteira do inquilino, verificada
+-- pelo banco. Quem nao e membro daquele restaurante nao escreve na pasta
+-- dele, independentemente do que a aplicacao mande.
+drop policy if exists menu_media_insert_member on storage.objects;
+create policy menu_media_insert_member on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id in ('menu-images', 'menu-videos')
+    and public.is_member(public.restaurant_id_from_storage_path(name))
+  );
+
+drop policy if exists menu_media_update_member on storage.objects;
+create policy menu_media_update_member on storage.objects
+  for update to authenticated
+  using (
+    bucket_id in ('menu-images', 'menu-videos')
+    and public.is_member(public.restaurant_id_from_storage_path(name))
+  )
+  with check (
+    bucket_id in ('menu-images', 'menu-videos')
+    and public.is_member(public.restaurant_id_from_storage_path(name))
+  );
+
+drop policy if exists menu_media_delete_member on storage.objects;
+create policy menu_media_delete_member on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id in ('menu-images', 'menu-videos')
+    and public.is_member(public.restaurant_id_from_storage_path(name))
+  );
+
