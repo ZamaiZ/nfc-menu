@@ -10,6 +10,8 @@ import {
   updateItemSchema,
   updateVariantSchema,
   type MenuCategoryDTO,
+  type OwnerMenuCategoryDTO,
+  type OwnerMenuItemDTO,
   type PublicMenuDTO,
 } from '@/domain/menu'
 import { createUserClient } from './_client'
@@ -51,6 +53,7 @@ type RawVariant = {
 type RawMedia = {
   kind: 'image' | 'video'
   storage_path: string
+  poster_path: string | null
   alt_text: string | null
   duration_ms: number | null
   position: number
@@ -95,7 +98,7 @@ export async function getPublicMenu(
            id, name, description, base_price_cents, is_available, is_visible,
            position, dietary_tags,
            menu_item_variants ( id, name, price_cents, is_available, position ),
-           menu_item_media ( kind, storage_path, alt_text, duration_ms, position )
+           menu_item_media ( kind, storage_path, poster_path, alt_text, duration_ms, position )
          )
        )`,
     )
@@ -143,6 +146,7 @@ export async function getPublicMenu(
             .map((media) => ({
               kind: media.kind,
               storagePath: media.storage_path,
+              posterPath: media.poster_path,
               altText: media.alt_text,
               durationMs: media.duration_ms,
             })),
@@ -160,6 +164,73 @@ export async function getPublicMenu(
     },
     categories,
   }
+}
+
+export async function getMenuForOwner(
+  restaurantId: unknown,
+): Promise<OwnerMenuCategoryDTO[]> {
+  const id = uuidSchema.parse(restaurantId)
+  await requireMember(id)
+
+  const supabase = await db()
+  const { data, error } = await supabase
+    .from('menu_categories')
+    .select(
+      `id, name, description, position, is_visible,
+       menu_items (
+         id, name, description, base_price_cents, is_available, is_visible,
+         position, dietary_tags,
+         menu_item_variants ( id, name, price_cents, is_available, position ),
+         menu_item_media ( id, kind, storage_path, poster_path, alt_text, position )
+       )`,
+    )
+    .eq('restaurant_id', id)
+    .order('position')
+
+  if (error) {
+    throw new Error(`Não foi possível carregar o cardápio: ${error.message}`)
+  }
+
+  // Sem filtro de visibilidade, ao contrário de getPublicMenu. A ordenação
+  // dos aninhados vem em JavaScript porque o PostgREST ordena o nível de
+  // cima, mas não os embutidos.
+  return (data ?? []).map((category) => ({
+    id: category.id,
+    name: category.name,
+    description: category.description,
+    position: category.position,
+    isVisible: category.is_visible,
+    items: (category.menu_items ?? [])
+      .sort((a, b) => a.position - b.position)
+      .map((item): OwnerMenuItemDTO => ({
+        id: item.id,
+        categoryId: category.id,
+        name: item.name,
+        description: item.description,
+        basePriceCents: item.base_price_cents,
+        isAvailable: item.is_available,
+        isVisible: item.is_visible,
+        position: item.position,
+        dietaryTags: item.dietary_tags ?? [],
+        variants: (item.menu_item_variants ?? [])
+          .sort((a, b) => a.position - b.position)
+          .map((variant) => ({
+            id: variant.id,
+            name: variant.name,
+            priceCents: variant.price_cents,
+            isAvailable: variant.is_available,
+          })),
+        media: (item.menu_item_media ?? [])
+          .sort((a, b) => a.position - b.position)
+          .map((media) => ({
+            id: media.id,
+            kind: media.kind,
+            storagePath: media.storage_path,
+            posterPath: media.poster_path,
+            altText: media.alt_text,
+          })),
+      })),
+  }))
 }
 
 export async function listCategories(restaurantId: unknown) {
@@ -288,6 +359,9 @@ export async function updateItem(input: unknown): Promise<void> {
   const { error } = await supabase
     .from('menu_items')
     .update({
+      // Mover para a categoria de OUTRO restaurante continua impossível:
+      // quem recusa é a chave estrangeira composta, não um if aqui.
+      category_id: data.categoryId,
       name: data.name,
       description: data.description ?? null,
       base_price_cents: data.basePriceCents,

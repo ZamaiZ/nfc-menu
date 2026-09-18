@@ -4,6 +4,8 @@ import {
   createRestaurantSchema,
   setRestaurantStatusSchema,
   updateRestaurantProfileSchema,
+  updateSlugSchema,
+  type RestaurantDetailDTO,
   type RestaurantAdminDTO,
   type RestaurantMemberDTO,
   type RestaurantPublicDTO,
@@ -12,6 +14,7 @@ import {
 import { recordAudit } from '@/server/security/audit'
 import { createUserClient } from './_client'
 import {
+  ConflictError,
   currentTerritory,
   requireOwner,
   requirePlatformAdmin,
@@ -61,6 +64,12 @@ export async function createRestaurant(
     .single()
 
   if (error) {
+    // 23505 é violação de unicidade. O único unique desta tabela é o slug,
+    // então aqui isso significa endereço já em uso — condição prevista,
+    // que a pessoa consegue corrigir sozinha trocando uma palavra.
+    if (error.code === '23505') {
+      throw new ConflictError('Este endereço já está em uso.')
+    }
     throw new Error(`Não foi possível criar o restaurante: ${error.message}`)
   }
 
@@ -215,6 +224,61 @@ export async function getRestaurantForMember(
     coverPath: data.cover_path as string | null,
     contact: (data.contact ?? {}) as Record<string, string>,
   }
+}
+
+export async function getRestaurantForAdmin(
+  restaurantId: unknown,
+): Promise<RestaurantDetailDTO | null> {
+  const id = uuidSchema.parse(restaurantId)
+  await requirePlatformAdmin()
+
+  const supabase = await db()
+  const { data, error } = await supabase
+    .from('restaurants')
+    .select('id, slug, name, description, status, contact, created_at, deleted_at')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error || !data) return null
+
+  return {
+    id: data.id,
+    slug: data.slug,
+    name: data.name,
+    description: data.description,
+    status: data.status,
+    contact: (data.contact ?? {}) as Record<string, string>,
+    createdAt: data.created_at,
+    deletedAt: data.deleted_at,
+  }
+}
+
+export async function updateRestaurantSlug(input: unknown): Promise<void> {
+  const data = updateSlugSchema.parse(input)
+  // Só a plataforma troca o endereço. O gatilho no banco recusaria de
+  // qualquer forma; esta linha dá a mensagem decente antes de chegar lá.
+  await requirePlatformAdmin()
+
+  const supabase = await db()
+  const { error } = await supabase
+    .from('restaurants')
+    .update({ slug: data.slug })
+    .eq('id', data.restaurantId)
+
+  if (error) {
+    if (error.code === '23505') {
+      throw new ConflictError('Este endereço já está em uso.')
+    }
+    throw new Error(`Não foi possível alterar o endereço: ${error.message}`)
+  }
+
+  await recordAudit({
+    action: 'restaurant.slug_changed',
+    subjectType: 'restaurant',
+    subjectId: data.restaurantId,
+    restaurantId: data.restaurantId,
+    metadata: { slug: data.slug },
+  })
 }
 
 export async function getRestaurantBySlugPublic(

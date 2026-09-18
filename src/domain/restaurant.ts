@@ -62,3 +62,19 @@ export type RestaurantMemberDTO = {
   coverPath: string | null
   contact: Record<string, string>
 }
+
+export const updateSlugSchema = z.object({
+  restaurantId: uuidSchema,
+  slug: slugSchema,
+})
+
+export type RestaurantDetailDTO = {
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  status: RestaurantStatus
+  contact: Record<string, string>
+  createdAt: string
+  deletedAt: string | null
+}

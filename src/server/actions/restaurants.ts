@@ -43,3 +43,12 @@ export async function softDeleteRestaurantAction(
     revalidatePath('/')
   })
 }
+
+export async function updateRestaurantSlugAction(
+  input: unknown,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await dal.updateRestaurantSlug(input)
+    revalidatePath('/')
+  })
+}

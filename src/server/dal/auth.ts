@@ -7,12 +7,28 @@ import { createUserClient } from './_client'
 
 export type AuthUser = { id: string; email: string | null }
 
-export class ForbiddenError extends Error {
-  constructor(message = 'Sem permissão para esta operação') {
+// Erro PREVISTO, com mensagem escrita por nós, segura para chegar na tela.
+// Diferente do genérico do runAction, que existe para não vazar nome de
+// tabela e constraint do Postgres — um mapa do schema de graça para quem
+// estiver sondando.
+//
+// Todo erro que deva ser mostrado ao usuário estende esta classe. O
+// runAction testa a BASE, não cada filha, então acrescentar um erro novo
+// não exige lembrar de atualizar o runAction junto.
+export class UserFacingError extends Error {
+  constructor(message: string) {
     super(message)
-    this.name = 'ForbiddenError'
+    this.name = new.target.name
   }
 }
+
+export class ForbiddenError extends UserFacingError {
+  constructor(message = 'Sem permissão para esta operação') {
+    super(message)
+  }
+}
+
+export class ConflictError extends UserFacingError {}
 
 export const currentTerritory = cache(async (): Promise<Territory> => {
   const requestHeaders = await headers()
@@ -48,12 +64,19 @@ export async function requireUser(): Promise<AuthUser> {
   return user
 }
 
+type GuardFunction = 'is_platform_admin' | 'is_member' | 'is_owner'
+
 async function callGuard(
-  fn: string,
+  fn: GuardFunction,
   args: Record<string, unknown> = {},
 ): Promise<boolean> {
   const supabase = await createUserClient(await currentTerritory())
-  const { data, error } = await supabase.rpc(fn, args)
+  // O cast existe porque as três funções compartilham a forma
+  // (uuid opcional) -> boolean, mas o tipo gerado as trata separadamente.
+  const { data, error } = await supabase.rpc(
+    fn as 'is_platform_admin',
+    args as never,
+  )
   return !error && data === true
 }
 

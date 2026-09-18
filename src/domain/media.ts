@@ -11,11 +11,16 @@ export const MEDIA_LIMITS = {
   image: {
     bucket: IMAGE_BUCKET,
     maxBytes: 5_242_880,
+    // Teto por item. Não é limite técnico: é o ponto em que a galeria de um
+    // prato deixa de ajudar a decidir e passa a atrapalhar.
+    maxPerItem: 6,
     mimes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif'],
   },
   video: {
     bucket: VIDEO_BUCKET,
     maxBytes: 10_485_760,
+    // Vídeo é caro em tráfego, e o limite de um já estava na Fase 0.
+    maxPerItem: 1,
     mimes: ['video/mp4', 'video/webm'],
   },
 } as const
@@ -24,6 +29,9 @@ export const registerMediaSchema = z.object({
   itemId: uuidSchema,
   kind: mediaKindSchema,
   storagePath: z.string().min(1).max(400),
+  // Só faz sentido quando kind = 'video'. Anulável porque a captura pode
+  // falhar, e falhar em capturar não impede subir o vídeo.
+  posterPath: z.string().min(1).max(400).optional(),
   altText: plainTextSchema(160).optional(),
   width: z.int().min(1).max(10_000).optional(),
   height: z.int().min(1).max(10_000).optional(),

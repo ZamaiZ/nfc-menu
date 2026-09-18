@@ -5,12 +5,12 @@ import type { MediaKind } from '@/domain/media'
 import * as dal from '@/server/dal/media'
 import { runAction, type ActionResult } from './result'
 
-export async function buildUploadPathAction(input: {
+export async function createUploadTicketAction(input: {
   itemId: string
   kind: MediaKind
   mimeType: string
-}): Promise<ActionResult<{ bucket: string; path: string }>> {
-  return runAction(() => dal.buildUploadPath(input))
+}): Promise<ActionResult<{ bucket: string; path: string; signedUrl: string }>> {
+  return runAction(() => dal.createUploadTicket(input))
 }
 
 export async function registerItemMediaAction(

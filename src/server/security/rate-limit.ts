@@ -1,6 +1,6 @@
 import 'server-only'
 import { createUserClient } from '@/server/dal/_client'
-import { currentTerritory } from '@/server/dal/auth'
+import { currentTerritory, UserFacingError } from '@/server/dal/auth'
 
 export const RATE_LIMITS = {
   'invite:preview': { max: 10, windowSeconds: 60 },
@@ -12,10 +12,9 @@ export const RATE_LIMITS = {
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS
 
-export class RateLimitedError extends Error {
+export class RateLimitedError extends UserFacingError {
   constructor() {
     super('Muitas tentativas. Aguarde um minuto e tente de novo.')
-    this.name = 'RateLimitedError'
   }
 }
 

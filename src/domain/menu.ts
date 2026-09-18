@@ -33,8 +33,10 @@ export const createItemSchema = z.object({
   dietaryTags: z.array(plainTextSchema(30)).max(10).default([]),
 })
 
+// categoryId NÃO é omitido: trocar a categoria de um item é edição comum, e
+// omiti-lo aqui tornava isso impossível — o campo nem chegava ao banco.
 export const updateItemSchema = createItemSchema
-  .omit({ restaurantId: true, categoryId: true })
+  .omit({ restaurantId: true })
   .extend({
     itemId: uuidSchema,
     isVisible: z.boolean(),
@@ -60,6 +62,7 @@ export const updateVariantSchema = createVariantSchema.extend({
 export type MenuMediaDTO = {
   kind: 'image' | 'video'
   storagePath: string
+  posterPath: string | null
   altText: string | null
   durationMs: number | null
 }
@@ -97,4 +100,42 @@ export type PublicMenuDTO = {
     contact: Record<string, string>
   }
   categories: MenuCategoryDTO[]
+}
+
+// Espelha o PublicMenuDTO, mas expõe as bandeiras de visibilidade e não
+// filtra nada: quem edita precisa ver o que o cliente não vê.
+export type OwnerMenuItemDTO = {
+  id: string
+  // Necessário para o seletor de categoria do diálogo de edição saber qual
+  // opção já está escolhida.
+  categoryId: string
+  name: string
+  description: string | null
+  basePriceCents: number
+  isAvailable: boolean
+  isVisible: boolean
+  position: number
+  dietaryTags: string[]
+  variants: {
+    id: string
+    name: string
+    priceCents: number
+    isAvailable: boolean
+  }[]
+  media: {
+    id: string
+    kind: 'image' | 'video'
+    storagePath: string
+    posterPath: string | null
+    altText: string | null
+  }[]
+}
+
+export type OwnerMenuCategoryDTO = {
+  id: string
+  name: string
+  description: string | null
+  position: number
+  isVisible: boolean
+  items: OwnerMenuItemDTO[]
 }

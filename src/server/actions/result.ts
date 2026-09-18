@@ -1,7 +1,6 @@
 import 'server-only'
 import { ZodError } from 'zod'
-import { ForbiddenError } from '@/server/dal/auth'
-import { RateLimitedError } from '@/server/security/rate-limit'
+import { UserFacingError } from '@/server/dal/auth'
 
 export type ActionResult<T = void> =
   | { ok: true; data: T }
@@ -35,7 +34,9 @@ export async function runAction<T>(
     if (error instanceof ZodError) {
       return { ok: false, error: error.issues[0]?.message ?? 'Dados inválidos' }
     }
-    if (error instanceof ForbiddenError || error instanceof RateLimitedError) {
+    // Testa a BASE, não cada filha. Um erro previsto novo passa a chegar
+    // na tela sem exigir que alguém lembre de atualizar esta linha.
+    if (error instanceof UserFacingError) {
       return { ok: false, error: error.message }
     }
 

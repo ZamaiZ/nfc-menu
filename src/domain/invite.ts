@@ -37,3 +37,12 @@ export type InvitePreviewDTO = {
   restaurantName: string
   role: MembershipRole
 }
+
+export type MemberDTO = {
+  membershipId: string
+  userId: string
+  email: string | null
+  displayName: string | null
+  role: MembershipRole
+  joinedAt: string
+}

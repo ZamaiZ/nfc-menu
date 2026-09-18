@@ -66,11 +66,16 @@ Itens obrigatórios, nenhum deles opcional:
 
 ## Dívidas conhecidas
 
+> Resolvida na Fase 1: os tipos do banco passaram a ser gerados em
+> `src/domain/database.types.ts` e o cliente Supabase é tipado com eles.
+> Regerar com `npx supabase gen types typescript --local` sempre que uma
+> migration mudar o schema.
+
+
 | Dívida | Consequência | Quando vence |
 |---|---|---|
 | Sem SMTP | Não existe "esqueci minha senha". A recuperação é o administrador emitir um convite novo | Ao passar de ~10 restaurantes |
 | Sem testes automatizados | Nenhum alarme quando alguém alterar uma política de RLS. As garantias estruturais (chave estrangeira composta, RLS negando por padrão) seguem valendo sozinhas | A critério do cliente |
-| Sem tipos gerados do banco | Errar o nome de uma coluna na DAL não é erro de compilação | Primeiro passo da Fase 1: `npx supabase gen types typescript` |
 | Duração de vídeo não verificada no servidor | Um dono pode subir vídeo longo de baixa qualidade no próprio cardápio | Quando entrar serviço de vídeo dedicado |
 | Órfãos de upload interrompido | Acúmulo lento no storage | Quando o volume justificar uma rotina de limpeza |
 | Sem cache entre requisições | Cada acesso ao cardápio consulta o banco | Quando o volume justificar. A DAL já é a fronteira de cache |

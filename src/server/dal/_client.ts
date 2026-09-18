@@ -3,6 +3,7 @@ import { createServerClient, type CookieOptionsWithName } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import type { NextRequest, NextResponse } from 'next/server'
+import type { Database } from '@/domain/database.types'
 import { env } from '@/server/env'
 import { cookieNameFor, type Territory } from '@/server/territory'
 
@@ -21,10 +22,10 @@ function cookieOptionsFor(territory: Territory): CookieOptionsWithName {
 
 export async function createUserClient(
   territory: Territory,
-): Promise<SupabaseClient> {
+): Promise<SupabaseClient<Database>> {
   const cookieStore = await cookies()
 
-  return createServerClient(
+  return createServerClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
@@ -57,8 +58,8 @@ export function createProxyClient(
   request: NextRequest,
   response: NextResponse,
   territory: Territory,
-): SupabaseClient {
-  return createServerClient(
+): SupabaseClient<Database> {
+  return createServerClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {

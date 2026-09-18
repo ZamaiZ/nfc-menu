@@ -29,15 +29,21 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // Componente cliente e hook nunca alcancam codigo de servidor.
+  // Componente cliente e hook nunca alcancam a DAL nem as primitivas de
+  // seguranca. As server actions sao a excecao deliberada: e exatamente
+  // para isso que elas existem, e a diretiva use server garante que o corpo
+  // nunca vai para o pacote do navegador.
   {
     files: ["src/components/**/*.{ts,tsx}", "src/hooks/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": ["error", {
         patterns: [{
-          group: ["@/server", "@/server/*", "@/server/**"],
+          group: [
+            "@/server/dal", "@/server/dal/*",
+            "@/server/security", "@/server/security/*",
+          ],
           message:
-            "Componentes e hooks nao importam src/server. Receba dados por props ou chame uma server action.",
+            "Componentes e hooks nao importam a DAL nem security. Receba dados por props ou chame uma server action de @/server/actions.",
         }],
       }],
     },
