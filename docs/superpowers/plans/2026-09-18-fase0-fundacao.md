@@ -36,6 +36,16 @@ A spec (seção 6) prevê as extensões `citext` e `pgcrypto`. **Este plano não
 
 O ganho não é só uma dependência a menos: com `set search_path = ''` toda referência precisa ser qualificada, e `pg_catalog` é mais estável e previsível do que o schema `extensions` do Supabase. A spec foi atualizada para refletir isso.
 
+## Emenda ao modelo de execução (2026-09-18)
+
+O plano foi escrito supondo `npx supabase db reset` contra o Postgres local. **Mudou em execução, por decisão do cliente:**
+
+- O banco de verdade é o **projeto Supabase na nuvem**, e as migrations são coladas no **SQL Editor** do dashboard, na mão.
+- Por isso toda migration é **idempotente**: `create table if not exists`, `drop policy if exists` antes de cada `create policy`, enum criado dentro de bloco que checa antes. O SQL Editor não guarda estado de migração — rodar o mesmo arquivo duas vezes tem que ser inofensivo, e uma execução que falhe no meio tem que poder ser repetida inteira.
+- O **Supabase local é o banco de prova**: cada migration é aplicada e verificada lá primeiro, e só depois entregue testada para colar na nuvem. Onde o plano diz `npx supabase db reset`, leia "aplicar o arquivo no banco de prova".
+- O acesso ao banco de prova é `docker exec -i supabase_db_nfc-menu psql -U postgres -d postgres` — `psql` não está instalado solto nesta máquina. É o `PSQL` citado nas tarefas.
+- **Sem lint** como portão de verificação, também por decisão do cliente. A verificação de código é `pnpm exec tsc --noEmit`.
+
 ## Pré-requisitos
 
 **O Docker Desktop precisa estar rodando antes da Tarefa 1.** Nesta máquina o Docker 29.5.2 está instalado mas o daemon não responde — o Docker Desktop está fechado. Sem ele, `supabase start` falha e nenhuma verificação deste plano funciona.
