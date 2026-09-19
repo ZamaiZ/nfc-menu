@@ -2,6 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { memberRoleSchema, type MemberRole } from '@/domain/invite'
 import { territoryFromHost, type Territory } from '@/server/territory'
 import { createUserClient } from './_client'
 
@@ -64,7 +65,7 @@ export async function requireUser(): Promise<AuthUser> {
   return user
 }
 
-type GuardFunction = 'is_platform_admin' | 'is_member' | 'is_owner'
+type GuardFunction = 'is_platform_admin' | 'is_member' | 'is_restaurant_admin'
 
 async function callGuard(
   fn: GuardFunction,
@@ -95,11 +96,32 @@ export async function requireMember(restaurantId: string): Promise<AuthUser> {
   return user
 }
 
-export async function requireOwner(restaurantId: string): Promise<AuthUser> {
+// Substituiu o requireOwner. A diferença não é de nome: `is_member` significa
+// "trabalha aqui" e passou a ser insuficiente para escrever, agora que garçom,
+// caixa e atendente existem.
+export async function requireRestaurantAdmin(
+  restaurantId: string,
+): Promise<AuthUser> {
   const user = await requireUser()
   const allowed =
-    (await callGuard('is_owner', { rid: restaurantId })) ||
+    (await callGuard('is_restaurant_admin', { rid: restaurantId })) ||
     (await callGuard('is_platform_admin'))
   if (!allowed) throw new ForbiddenError()
   return user
+}
+
+// Alimenta a camada de INTERFACE, e só ela: é o papel que decide se o botão
+// aparece. Esconder botão é cortesia, não segurança — quem chamar a action na
+// mão continua barrado pelo requireRestaurantAdmin e pela RLS.
+//
+// Devolve nulo para quem não é membro, o que é diferente de um papel sem
+// poder. A tela usa a diferença: não-membro nem enxerga o restaurante.
+export async function myRole(restaurantId: string): Promise<MemberRole | null> {
+  await requireUser()
+  const supabase = await createUserClient(await currentTerritory())
+  const { data, error } = await supabase.rpc('my_role', { rid: restaurantId })
+  if (error || !data) return null
+
+  const parsed = memberRoleSchema.safeParse(data)
+  return parsed.success ? parsed.data : null
 }

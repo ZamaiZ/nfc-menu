@@ -25,6 +25,26 @@ export const MEDIA_LIMITS = {
   },
 } as const
 
+// A marca do restaurante: logo e capa. Vive no mesmo bucket de imagem do
+// cardápio, sob o prefixo `${restaurantId}/brand/`, o que faz a política de
+// storage já valer — ela lê o PRIMEIRO segmento do caminho para descobrir o
+// inquilino, e esse segmento continua sendo o id do restaurante.
+export const brandSlotSchema = z.enum(['logo', 'cover'])
+export type BrandSlot = z.infer<typeof brandSlotSchema>
+
+export const BRAND_SLOT_LABELS: Record<BrandSlot, string> = {
+  logo: 'Logo',
+  cover: 'Foto de capa',
+}
+
+export const setBrandImageSchema = z.object({
+  restaurantId: uuidSchema,
+  slot: brandSlotSchema,
+  // Nulo remove a imagem. É a mesma operação vista do outro lado, e separar
+  // em duas ações criaria dois caminhos para o mesmo apagamento de arquivo.
+  storagePath: z.string().min(1).max(400).nullable(),
+})
+
 export const registerMediaSchema = z.object({
   itemId: uuidSchema,
   kind: mediaKindSchema,

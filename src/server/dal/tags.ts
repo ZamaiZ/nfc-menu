@@ -12,7 +12,12 @@ import { rateLimitIdentity } from '@/server/security/client-ip'
 import { enforceRateLimit } from '@/server/security/rate-limit'
 import { generateTagToken } from '@/server/security/tokens'
 import { createUserClient } from './_client'
-import { currentTerritory, requireMember, requirePlatformAdmin } from './auth'
+import {
+  currentTerritory,
+  requireMember,
+  requirePlatformAdmin,
+  requireRestaurantAdmin,
+} from './auth'
 
 async function db() {
   return createUserClient(await currentTerritory())
@@ -98,7 +103,7 @@ export async function updateTag(input: unknown): Promise<void> {
     .single()
 
   if (lookupError || !row) throw new Error('Plaquinha não encontrada')
-  await requireMember(row.restaurant_id as string)
+  await requireRestaurantAdmin(row.restaurant_id as string)
 
   // public_token e restaurant_id nao aparecem aqui: o gatilho no banco
   // recusaria a alteracao de qualquer forma.

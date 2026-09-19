@@ -15,7 +15,11 @@ import {
   type PublicMenuDTO,
 } from '@/domain/menu'
 import { createUserClient } from './_client'
-import { currentTerritory, requireMember } from './auth'
+import {
+  currentTerritory,
+  requireMember,
+  requireRestaurantAdmin,
+} from './auth'
 
 async function db() {
   return createUserClient(await currentTerritory())
@@ -91,7 +95,7 @@ export async function getPublicMenu(
   const { data, error } = await supabase
     .from('restaurants')
     .select(
-      `slug, name, description, logo_path, cover_path, contact,
+      `slug, name, description, logo_path, cover_path, contact, theme,
        menu_categories (
          id, name, description, position, is_visible,
          menu_items (
@@ -161,6 +165,7 @@ export async function getPublicMenu(
       logoPath: data.logo_path as string | null,
       coverPath: data.cover_path as string | null,
       contact: (data.contact ?? {}) as Record<string, string>,
+      theme: data.theme,
     },
     categories,
   }
@@ -259,7 +264,7 @@ export async function listCategories(restaurantId: unknown) {
 
 export async function createCategory(input: unknown): Promise<string> {
   const data = createCategorySchema.parse(input)
-  await requireMember(data.restaurantId)
+  await requireRestaurantAdmin(data.restaurantId)
 
   const supabase = await db()
   const { data: row, error } = await supabase
@@ -280,7 +285,7 @@ export async function createCategory(input: unknown): Promise<string> {
 
 export async function updateCategory(input: unknown): Promise<void> {
   const data = updateCategorySchema.parse(input)
-  await requireMember(await ownerRestaurantOf('menu_categories', data.categoryId))
+  await requireRestaurantAdmin(await ownerRestaurantOf('menu_categories', data.categoryId))
 
   const supabase = await db()
   const { error } = await supabase
@@ -299,7 +304,7 @@ export async function updateCategory(input: unknown): Promise<void> {
 
 export async function deleteCategory(categoryId: unknown): Promise<void> {
   const id = uuidSchema.parse(categoryId)
-  await requireMember(await ownerRestaurantOf('menu_categories', id))
+  await requireRestaurantAdmin(await ownerRestaurantOf('menu_categories', id))
 
   const supabase = await db()
   const { error } = await supabase.from('menu_categories').delete().eq('id', id)
@@ -310,7 +315,7 @@ export async function deleteCategory(categoryId: unknown): Promise<void> {
 
 export async function reorderCategories(input: unknown): Promise<void> {
   const data = reorderSchema.parse(input)
-  await requireMember(data.restaurantId)
+  await requireRestaurantAdmin(data.restaurantId)
 
   const supabase = await db()
   for (const entry of data.order) {
@@ -329,7 +334,7 @@ export async function reorderCategories(input: unknown): Promise<void> {
 
 export async function createItem(input: unknown): Promise<string> {
   const data = createItemSchema.parse(input)
-  await requireMember(data.restaurantId)
+  await requireRestaurantAdmin(data.restaurantId)
 
   const supabase = await db()
   const { data: row, error } = await supabase
@@ -353,7 +358,7 @@ export async function createItem(input: unknown): Promise<string> {
 
 export async function updateItem(input: unknown): Promise<void> {
   const data = updateItemSchema.parse(input)
-  await requireMember(await ownerRestaurantOf('menu_items', data.itemId))
+  await requireRestaurantAdmin(await ownerRestaurantOf('menu_items', data.itemId))
 
   const supabase = await db()
   const { error } = await supabase
@@ -376,7 +381,7 @@ export async function updateItem(input: unknown): Promise<void> {
 
 export async function deleteItem(itemId: unknown): Promise<void> {
   const id = uuidSchema.parse(itemId)
-  await requireMember(await ownerRestaurantOf('menu_items', id))
+  await requireRestaurantAdmin(await ownerRestaurantOf('menu_items', id))
 
   const supabase = await db()
   const { error } = await supabase.from('menu_items').delete().eq('id', id)
@@ -385,7 +390,7 @@ export async function deleteItem(itemId: unknown): Promise<void> {
 
 export async function reorderItems(input: unknown): Promise<void> {
   const data = reorderSchema.parse(input)
-  await requireMember(data.restaurantId)
+  await requireRestaurantAdmin(data.restaurantId)
 
   const supabase = await db()
   for (const entry of data.order) {
@@ -401,7 +406,7 @@ export async function reorderItems(input: unknown): Promise<void> {
 
 export async function setItemAvailability(input: unknown): Promise<void> {
   const data = setItemAvailabilitySchema.parse(input)
-  await requireMember(await ownerRestaurantOf('menu_items', data.itemId))
+  await requireRestaurantAdmin(await ownerRestaurantOf('menu_items', data.itemId))
 
   const supabase = await db()
   const { error } = await supabase
@@ -417,7 +422,7 @@ export async function setItemAvailability(input: unknown): Promise<void> {
 export async function createVariant(input: unknown): Promise<string> {
   const data = createVariantSchema.parse(input)
   const restaurantId = await ownerRestaurantOf('menu_items', data.itemId)
-  await requireMember(restaurantId)
+  await requireRestaurantAdmin(restaurantId)
 
   const supabase = await db()
   const { data: row, error } = await supabase
@@ -439,7 +444,7 @@ export async function createVariant(input: unknown): Promise<string> {
 
 export async function updateVariant(input: unknown): Promise<void> {
   const data = updateVariantSchema.parse(input)
-  await requireMember(
+  await requireRestaurantAdmin(
     await ownerRestaurantOf('menu_item_variants', data.variantId),
   )
 
@@ -460,7 +465,7 @@ export async function updateVariant(input: unknown): Promise<void> {
 
 export async function deleteVariant(variantId: unknown): Promise<void> {
   const id = uuidSchema.parse(variantId)
-  await requireMember(await ownerRestaurantOf('menu_item_variants', id))
+  await requireRestaurantAdmin(await ownerRestaurantOf('menu_item_variants', id))
 
   const supabase = await db()
   const { error } = await supabase

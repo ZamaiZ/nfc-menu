@@ -12,3 +12,12 @@ export async function removeMemberAction(
     revalidatePath('/')
   })
 }
+
+export async function changeMemberRoleAction(
+  input: unknown,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await dal.changeMemberRole(input)
+    revalidatePath('/')
+  })
+}

@@ -44,3 +44,6 @@ next-env.d.ts
 
 # log do servidor de desenvolvimento
 dev.log
+
+# maquetes do brainstorm visual
+.superpowers/

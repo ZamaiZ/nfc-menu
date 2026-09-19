@@ -1,0 +1,222 @@
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500;600;700&display=swap');
+
+.nfc-stage { display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; margin: 28px 0 8px; }
+.nfc-col { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 300px; }
+.nfc-phone {
+  width: 300px; height: 600px; border-radius: 34px; overflow: hidden;
+  border: 9px solid #15161a; box-shadow: 0 22px 50px rgba(0,0,0,.30);
+  position: relative; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease;
+}
+.nfc-col:hover .nfc-phone { transform: translateY(-4px); box-shadow: 0 28px 62px rgba(0,0,0,.38); }
+.nfc-col.is-on .nfc-phone { outline: 3px solid #3b82f6; outline-offset: 5px; }
+.nfc-scroll { height: 100%; overflow: hidden; }
+.nfc-cap { text-align: center; }
+.nfc-cap h3 { margin: 0 0 4px; font-size: 17px; }
+.nfc-cap p { margin: 0; font-size: 12.5px; line-height: 1.5; opacity: .72; }
+.nfc-note { text-align:center; font-size: 12.5px; opacity:.6; margin-top: 26px; }
+
+/* ================= BRASA ================= */
+.brasa { background: #0d0c0b; color: #f5f0e8; font-family: Inter, sans-serif; }
+.brasa .hero { height: 176px; position: relative;
+  background: linear-gradient(150deg,#5c1f0c,#a8410f 45%,#d97316 78%,#3a1206); }
+.brasa .hero::after { content:''; position:absolute; inset:0;
+  background: linear-gradient(to top, #0d0c0b 4%, rgba(13,12,11,.15) 62%); }
+.brasa .hero-txt { position:absolute; left:16px; right:16px; bottom:13px; z-index:2; }
+.brasa .nome { font-family: Anton, sans-serif; font-size: 31px; line-height: .96;
+  letter-spacing: .3px; text-transform: uppercase; }
+.brasa .sub { font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase;
+  color: #f0a154; margin-top: 6px; font-weight: 600; }
+.brasa .cat { font-family: Anton, sans-serif; font-size: 13px; letter-spacing: 2.4px;
+  text-transform: uppercase; color:#f0a154; padding: 20px 16px 9px; }
+.brasa .item { display:flex; gap:11px; padding: 11px 16px; align-items:center; }
+.brasa .ph { width:70px; height:70px; border-radius:4px; flex:none;
+  background: linear-gradient(140deg,#7a3413,#c25a17); }
+.brasa .in { flex:1; min-width:0; }
+.brasa .nm { font-weight:700; font-size:14.5px; letter-spacing:-.1px; }
+.brasa .ds { font-size:11.5px; line-height:1.45; color:#a39a8d; margin-top:3px; }
+.brasa .pr { font-family: Anton, sans-serif; font-size:19px; color:#f0a154; margin-top:6px; }
+.brasa .sep { height:1px; background:#241f1a; margin: 5px 16px; }
+
+/* ================= GRÃO ================= */
+.grao { background: #faf5ec; color: #33291d; font-family: Inter, sans-serif; }
+.grao .hero { height: 150px; position: relative;
+  background: linear-gradient(145deg,#c9a882,#8f6f4e 60%,#6b5138); }
+.grao .logo { position:absolute; left:50%; bottom:-30px; transform:translateX(-50%);
+  width:64px; height:64px; border-radius:50%; background:#faf5ec; z-index:3;
+  border:3px solid #faf5ec; box-shadow: 0 5px 16px rgba(80,58,36,.22);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Fraunces',serif; font-size:23px; color:#8f6f4e; }
+.grao .head { text-align:center; padding: 42px 22px 4px; }
+.grao .nome { font-family:'Fraunces',serif; font-size:25px; font-weight:600; letter-spacing:-.3px; }
+.grao .sub { font-size:12px; color:#8a7a66; margin-top:6px; line-height:1.55; }
+.grao .cat { text-align:center; font-size:10.5px; letter-spacing:2.6px; text-transform:uppercase;
+  color:#a8906f; padding: 26px 16px 4px; font-weight:600; }
+.grao .catline { width:26px; height:1px; background:#d6c3a6; margin:9px auto 4px; }
+.grao .item { display:flex; gap:13px; padding:13px 22px; align-items:center; }
+.grao .in { flex:1; min-width:0; }
+.grao .nm { font-family:'Fraunces',serif; font-size:16px; font-weight:600; }
+.grao .ds { font-size:11.5px; line-height:1.5; color:#8a7a66; margin-top:3px; }
+.grao .pr { font-size:14px; font-weight:600; color:#6b5138; flex:none; }
+.grao .ph { width:52px; height:52px; border-radius:50%; flex:none;
+  background:linear-gradient(140deg,#d8bf9c,#a5835c); }
+
+/* ================= SAL ================= */
+.sal { background: #fbfbfa; color: #1e1e1c; font-family: Inter, sans-serif; }
+.sal .hero { height: 122px; background: #edece8; position:relative; }
+.sal .hero::after { content:''; position:absolute; inset:0;
+  background: linear-gradient(150deg,#e2e0da,#cfccc4); }
+.sal .head { padding: 30px 26px 4px; text-align:center; }
+.sal .nome { font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:400;
+  letter-spacing:1.2px; line-height:1.1; }
+.sal .sub { font-size:9.5px; letter-spacing:3px; text-transform:uppercase;
+  color:#9a978f; margin-top:11px; font-weight:500; }
+.sal .cat { font-family:'Cormorant Garamond',serif; font-size:11px; letter-spacing:3.4px;
+  text-transform:uppercase; color:#9a978f; padding: 34px 26px 2px; text-align:center; }
+.sal .item { padding: 17px 26px; }
+.sal .row { display:flex; justify-content:space-between; align-items:baseline; gap:14px; }
+.sal .nm { font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:500; letter-spacing:.2px; }
+.sal .pr { font-size:12.5px; color:#78756e; font-weight:400; flex:none;
+  font-variant-numeric: tabular-nums; }
+.sal .ds { font-size:11.5px; line-height:1.65; color:#8b8880; margin-top:5px;
+  font-weight:300; max-width:82%; }
+.sal .sep { height:1px; background:#eae8e3; margin: 0 26px; }
+</style>
+
+<h2>Os três temas do cardápio público</h2>
+<p class="subtitle">O mesmo cardápio, a mesma Cantina do Zé, nos três presets. O que muda é o par tipográfico, a família de cor, o raio, a densidade e o tratamento da foto. Clique no que mais combina com o tipo de cliente que você vai atender primeiro — pode marcar mais de um.</p>
+
+<div class="nfc-stage options" data-multiselect>
+
+  <!-- ============ BRASA ============ -->
+  <div class="nfc-col option" data-choice="brasa" onclick="toggleSelect(this)">
+    <div class="nfc-phone">
+      <div class="nfc-scroll brasa">
+        <div class="hero">
+          <div class="hero-txt">
+            <div class="nome">Cantina<br>do Zé</div>
+            <div class="sub">Churrasco · Vila Mariana</div>
+          </div>
+        </div>
+        <div class="cat">Entradas</div>
+        <div class="item">
+          <div class="ph"></div>
+          <div class="in">
+            <div class="nm">Bolinho de bacalhau</div>
+            <div class="ds">Seis unidades, aioli de limão</div>
+            <div class="pr">R$ 38</div>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="item">
+          <div class="ph"></div>
+          <div class="in">
+            <div class="nm">Pastel de queijo</div>
+            <div class="ds">Massa fina, muçarela de búfala</div>
+            <div class="pr">R$ 24</div>
+          </div>
+        </div>
+        <div class="cat">Pratos principais</div>
+        <div class="item">
+          <div class="ph"></div>
+          <div class="in">
+            <div class="nm">Picanha na chapa</div>
+            <div class="ds">400g, farofa de ovo e vinagrete</div>
+            <div class="pr">R$ 128</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="nfc-cap">
+      <h3>Brasa</h3>
+      <p>Hamburgueria, churrascaria, boteco. Fundo escuro, tipografia condensada e pesada, foto grande, preço em destaque. Apetite em primeiro lugar.</p>
+    </div>
+  </div>
+
+  <!-- ============ GRÃO ============ -->
+  <div class="nfc-col option" data-choice="grao" onclick="toggleSelect(this)">
+    <div class="nfc-phone">
+      <div class="nfc-scroll grao">
+        <div class="hero"><div class="logo">CZ</div></div>
+        <div class="head">
+          <div class="nome">Cantina do Zé</div>
+          <div class="sub">Café e cozinha de bairro<br>Vila Mariana · São Paulo</div>
+        </div>
+        <div class="cat">Entradas<div class="catline"></div></div>
+        <div class="item">
+          <div class="in">
+            <div class="nm">Bolinho de bacalhau</div>
+            <div class="ds">Seis unidades, aioli de limão</div>
+          </div>
+          <div class="pr">R$ 38,00</div>
+          <div class="ph"></div>
+        </div>
+        <div class="item">
+          <div class="in">
+            <div class="nm">Pastel de queijo</div>
+            <div class="ds">Massa fina, muçarela de búfala</div>
+          </div>
+          <div class="pr">R$ 24,00</div>
+          <div class="ph"></div>
+        </div>
+        <div class="cat">Pratos principais<div class="catline"></div></div>
+        <div class="item">
+          <div class="in">
+            <div class="nm">Picanha na chapa</div>
+            <div class="ds">400g, farofa de ovo e vinagrete</div>
+          </div>
+          <div class="pr">R$ 128,00</div>
+          <div class="ph"></div>
+        </div>
+      </div>
+    </div>
+    <div class="nfc-cap">
+      <h3>Grão</h3>
+      <p>Café, padaria, bistrô, cantina de bairro. Serifada no nome do prato, fundo quente, logo redondo, foto pequena e discreta. Aconchego.</p>
+    </div>
+  </div>
+
+  <!-- ============ SAL ============ -->
+  <div class="nfc-col option" data-choice="sal" onclick="toggleSelect(this)">
+    <div class="nfc-phone">
+      <div class="nfc-scroll sal">
+        <div class="hero"></div>
+        <div class="head">
+          <div class="nome">Cantina do Zé</div>
+          <div class="sub">Vila Mariana</div>
+        </div>
+        <div class="cat">Entradas</div>
+        <div class="item">
+          <div class="row">
+            <div class="nm">Bolinho de bacalhau</div>
+            <div class="pr">38</div>
+          </div>
+          <div class="ds">Seis unidades, aioli de limão siciliano</div>
+        </div>
+        <div class="sep"></div>
+        <div class="item">
+          <div class="row">
+            <div class="nm">Pastel de queijo</div>
+            <div class="pr">24</div>
+          </div>
+          <div class="ds">Massa fina, muçarela de búfala curada</div>
+        </div>
+        <div class="cat">Pratos principais</div>
+        <div class="item">
+          <div class="row">
+            <div class="nm">Picanha na chapa</div>
+            <div class="pr">128</div>
+          </div>
+          <div class="ds">400g, farofa de ovo caipira e vinagrete de tomate defumado</div>
+        </div>
+      </div>
+    </div>
+    <div class="nfc-cap">
+      <h3>Sal</h3>
+      <p>Alta gastronomia. Saturação quase zero, display serifada com muito respiro, sem foto, preço sem ênfase nem cifrão. A descrição carrega o peso.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="nfc-note">Em todos os três, a cor de destaque é do dono e é validada por contraste antes de ser aceita. As fotos aqui estão como blocos de cor de propósito — a pergunta é sobre tipografia, cor e ritmo.</p>

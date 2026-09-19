@@ -94,9 +94,9 @@ export type Database = {
           id: string
           redeemed_at: string | null
           redeemed_by: string | null
-          restaurant_id: string
+          restaurant_id: string | null
           revoked_at: string | null
-          role: Database["public"]["Enums"]["membership_role"]
+          role: Database["public"]["Enums"]["member_role"]
           token_hash: string
         }
         Insert: {
@@ -107,9 +107,9 @@ export type Database = {
           id?: string
           redeemed_at?: string | null
           redeemed_by?: string | null
-          restaurant_id: string
+          restaurant_id: string | null
           revoked_at?: string | null
-          role: Database["public"]["Enums"]["membership_role"]
+          role: Database["public"]["Enums"]["member_role"]
           token_hash: string
         }
         Update: {
@@ -120,9 +120,9 @@ export type Database = {
           id?: string
           redeemed_at?: string | null
           redeemed_by?: string | null
-          restaurant_id?: string
+          restaurant_id?: string | null
           revoked_at?: string | null
-          role?: Database["public"]["Enums"]["membership_role"]
+          role?: Database["public"]["Enums"]["member_role"]
           token_hash?: string
         }
         Relationships: [
@@ -154,21 +154,21 @@ export type Database = {
           created_at: string
           id: string
           restaurant_id: string
-          role: Database["public"]["Enums"]["membership_role"]
+          role: Database["public"]["Enums"]["member_role"]
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           restaurant_id: string
-          role: Database["public"]["Enums"]["membership_role"]
+          role: Database["public"]["Enums"]["member_role"]
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
           restaurant_id?: string
-          role?: Database["public"]["Enums"]["membership_role"]
+          role?: Database["public"]["Enums"]["member_role"]
           user_id?: string
         }
         Relationships: [
@@ -514,6 +514,7 @@ export type Database = {
           id: string
           logo_path: string | null
           name: string
+          segment: string | null
           slug: string
           status: Database["public"]["Enums"]["restaurant_status"]
           theme: Json
@@ -531,6 +532,7 @@ export type Database = {
           id?: string
           logo_path?: string | null
           name: string
+          segment?: string | null
           slug: string
           status?: Database["public"]["Enums"]["restaurant_status"]
           theme?: Json
@@ -548,6 +550,7 @@ export type Database = {
           id?: string
           logo_path?: string | null
           name?: string
+          segment?: string | null
           slug?: string
           status?: Database["public"]["Enums"]["restaurant_status"]
           theme?: Json
@@ -581,16 +584,21 @@ export type Database = {
       is_category_visible: { Args: { cid: string }; Returns: boolean }
       is_member: { Args: { rid: string }; Returns: boolean }
       is_menu_item_public: { Args: { iid: string }; Returns: boolean }
-      is_owner: { Args: { rid: string }; Returns: boolean }
       is_platform_admin: { Args: never; Returns: boolean }
+      is_restaurant_admin: { Args: { rid: string }; Returns: boolean }
       is_restaurant_public: { Args: { rid: string }; Returns: boolean }
+      is_slug_available: { Args: { p_slug: string }; Returns: boolean }
+      my_role: {
+        Args: { rid: string }
+        Returns: Database["public"]["Enums"]["member_role"] | null
+      }
       list_restaurant_members: {
         Args: { p_restaurant_id: string }
         Returns: {
           display_name: string
           email: string
           joined_at: string
-          member_role: Database["public"]["Enums"]["membership_role"]
+          member_role: Database["public"]["Enums"]["member_role"]
           membership_id: string
           user_id: string
         }[]
@@ -598,8 +606,9 @@ export type Database = {
       preview_invite: {
         Args: { p_token: string }
         Returns: {
-          invite_role: Database["public"]["Enums"]["membership_role"]
-          restaurant_name: string
+          invite_kind: string
+          invite_role: Database["public"]["Enums"]["member_role"]
+          restaurant_name: string | null
         }[]
       }
       record_audit: {
@@ -614,6 +623,10 @@ export type Database = {
         Returns: undefined
       }
       redeem_invite: { Args: { p_token: string }; Returns: string }
+      redeem_platform_invite: {
+        Args: { p_name: string; p_slug: string; p_token: string }
+        Returns: string
+      }
       resolve_menu_tag: {
         Args: { p_token: string }
         Returns: {
@@ -628,7 +641,7 @@ export type Database = {
     }
     Enums: {
       media_kind: "image" | "video"
-      membership_role: "owner" | "manager"
+      member_role: "admin" | "cashier" | "attendant" | "waiter"
       restaurant_status: "draft" | "active" | "suspended"
     }
     CompositeTypes: {
@@ -761,7 +774,7 @@ export const Constants = {
   public: {
     Enums: {
       media_kind: ["image", "video"],
-      membership_role: ["owner", "manager"],
+      member_role: ["admin", "cashier", "attendant", "waiter"],
       restaurant_status: ["draft", "active", "suspended"],
     },
   },

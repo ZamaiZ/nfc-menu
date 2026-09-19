@@ -1,0 +1,57 @@
+/* As regras do cardápio público. NENHUMA cor literal aqui: tudo sai das
+   variáveis que `resolveTheme` produz, e é isso que permite oito temas
+   compartilharem uma folha só. */
+
+.menu {
+  background: var(--m-base);
+  color: var(--m-ink);
+  font-family: var(--m-font-text);
+  min-height: 100dvh;
+}
+
+.menu-display {
+  font-family: var(--m-font-display);
+}
+.menu-muted {
+  color: var(--m-muted);
+}
+.menu-accent {
+  color: var(--m-accent);
+}
+.menu-line {
+  border-color: var(--m-line);
+}
+.menu-block {
+  border-radius: var(--m-radius-block);
+}
+.menu-photo {
+  border-radius: var(--m-radius-photo);
+  object-fit: cover;
+}
+
+/* O único tema em que o item é um OBJETO, e não uma linha de lista. Isso é
+   layout, não cor — e é justamente o tipo de diferença que justifica um tema
+   próprio em vez de só outra paleta. */
+.menu[data-layout='cartao'] .menu-item {
+  background: color-mix(in oklab, var(--m-base) 78%, white);
+  border-radius: var(--m-radius-block);
+  box-shadow: 0 3px 12px color-mix(in oklab, var(--m-accent) 16%, transparent);
+  padding: 0.625rem;
+  margin-block: 0.375rem;
+}
+
+/* No tema de cartão a linha divisória some: o cartão já separa. Duas
+   separações no mesmo lugar é ruído. */
+.menu[data-layout='cartao'] .menu-list > li + li {
+  border-top-width: 0;
+}
+
+/* Compacto recolhe a descrição e aperta a linha. Existe porque rotisserie,
+   padaria e self-service têm centenas de itens e ficam ilegíveis no
+   espaçamento pensado para um rodízio de doze linhas. */
+.menu[data-density='compacto'] .menu-item {
+  padding-block: 0.5rem;
+}
+.menu[data-density='compacto'] .menu-item-description {
+  display: none;
+}

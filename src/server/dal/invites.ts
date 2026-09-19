@@ -2,13 +2,16 @@ import 'server-only'
 import { headers } from 'next/headers'
 import { uuidSchema } from '@/domain/common'
 import {
-  createInviteSchema,
+  createPlatformInviteSchema,
+  createTeamInviteSchema,
   inviteTokenSchema,
   type CreatedInviteDTO,
   type InviteDTO,
+  type InviteKind,
   type InvitePreviewDTO,
-  type MembershipRole,
+  type MemberRole,
 } from '@/domain/invite'
+import { createFromInviteSchema } from '@/domain/restaurant'
 import { originFor } from '@/server/territory'
 import { recordAudit } from '@/server/security/audit'
 import { rateLimitIdentity } from '@/server/security/client-ip'
@@ -18,30 +21,69 @@ import {
   hashInviteTokenForDb,
 } from '@/server/security/tokens'
 import { createUserClient } from './_client'
-import { currentTerritory, requireOwner, requirePlatformAdmin } from './auth'
+import {
+  ConflictError,
+  currentTerritory,
+  requireRestaurantAdmin,
+  requirePlatformAdmin,
+  UserFacingError,
+} from './auth'
 
 async function db() {
   return createUserClient(await currentTerritory())
 }
 
-export async function createInvite(input: unknown): Promise<CreatedInviteDTO> {
-  const data = createInviteSchema.parse(input)
-  const user = await requirePlatformAdmin()
+type InviteRow = {
+  id: string
+  restaurant_id: string | null
+  role: MemberRole
+  email: string | null
+  expires_at: string
+  redeemed_at: string | null
+  revoked_at: string | null
+}
 
+// token_hash NUNCA entra aqui. Nem para o dono do restaurante: não há uso
+// legítimo para ele fora das funções do banco.
+const INVITE_COLUMNS =
+  'id, restaurant_id, role, email, expires_at, redeemed_at, revoked_at'
+
+function toInviteDTO(row: InviteRow): InviteDTO {
+  return {
+    id: row.id,
+    restaurantId: row.restaurant_id,
+    role: row.role,
+    email: row.email,
+    expiresAt: row.expires_at,
+    redeemedAt: row.redeemed_at,
+    revokedAt: row.revoked_at,
+  }
+}
+
+// O corpo comum aos dois tipos de convite. O que muda entre eles é QUEM
+// autoriza e o que vai na linha; gerar o token, guardar só o hash e montar o
+// link é idêntico — e é a parte sensível, que não se duplica.
+async function insertInvite(input: {
+  restaurantId: string | null
+  role: MemberRole
+  email: string | null
+  expiresInDays: number
+  createdBy: string
+}): Promise<CreatedInviteDTO> {
   const token = generateInviteToken()
-  const expiresAt = new Date(Date.now() + data.expiresInDays * 86_400_000)
+  const expiresAt = new Date(Date.now() + input.expiresInDays * 86_400_000)
 
   const supabase = await db()
   const { data: row, error } = await supabase
     .from('invites')
     .insert({
-      restaurant_id: data.restaurantId,
-      role: data.role,
-      // So o hash vai para o banco. O token em claro existe apenas nesta
-      // funcao e no link devolvido uma unica vez.
+      restaurant_id: input.restaurantId,
+      role: input.role,
+      // Só o hash vai para o banco. O token em claro existe apenas nesta
+      // função e no link devolvido uma única vez.
       token_hash: hashInviteTokenForDb(token),
-      email: data.email ?? null,
-      created_by: user.id,
+      email: input.email,
+      created_by: input.createdBy,
       expires_at: expiresAt.toISOString(),
     })
     .select('id')
@@ -55,53 +97,108 @@ export async function createInvite(input: unknown): Promise<CreatedInviteDTO> {
     action: 'invite.created',
     subjectType: 'invite',
     subjectId: row.id as string,
-    restaurantId: data.restaurantId,
-    metadata: { role: data.role, boundToEmail: Boolean(data.email) },
+    restaurantId: input.restaurantId ?? undefined,
+    metadata: {
+      kind: input.restaurantId === null ? 'platform' : 'team',
+      role: input.role,
+      boundToEmail: Boolean(input.email),
+    },
   })
 
   const requestHeaders = await headers()
   const protocol =
     requestHeaders.get('x-forwarded-proto') === 'https' ? 'https:' : 'http:'
 
-  // O convite leva para o territorio onde a pessoa vai trabalhar.
+  // O convite leva para o território onde a pessoa vai trabalhar.
   return {
     id: row.id as string,
     link: `${originFor('painel', protocol)}/convite/${token}`,
   }
 }
 
-export async function listInvites(restaurantId: unknown): Promise<InviteDTO[]> {
-  const id = uuidSchema.parse(restaurantId)
-  await requireOwner(id)
+export async function createPlatformInvite(
+  input: unknown,
+): Promise<CreatedInviteDTO> {
+  const data = createPlatformInviteSchema.parse(input)
+  const user = await requirePlatformAdmin()
+
+  return insertInvite({
+    restaurantId: null,
+    role: 'admin',
+    email: data.email ?? null,
+    expiresInDays: data.expiresInDays,
+    createdBy: user.id,
+  })
+}
+
+export async function createTeamInvite(
+  input: unknown,
+): Promise<CreatedInviteDTO> {
+  const data = createTeamInviteSchema.parse(input)
+  // Autorização por POSSE do recurso, não só por estar autenticado. É o que
+  // fecha IDOR: saber o id de outro restaurante não basta.
+  const user = await requireRestaurantAdmin(data.restaurantId)
+
+  return insertInvite({
+    restaurantId: data.restaurantId,
+    role: data.role,
+    email: data.email ?? null,
+    expiresInDays: data.expiresInDays,
+    createdBy: user.id,
+  })
+}
+
+export async function listPlatformInvites(): Promise<InviteDTO[]> {
+  await requirePlatformAdmin()
 
   const supabase = await db()
   const { data, error } = await supabase
     .from('invites')
-    // token_hash NUNCA e selecionado. Nem para o dono do restaurante: nao
-    // ha uso legitimo para ele fora das funcoes do banco.
-    .select('id, role, email, expires_at, redeemed_at, revoked_at')
+    .select(INVITE_COLUMNS)
+    .is('restaurant_id', null)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    throw new Error(`Não foi possível listar convites: ${error.message}`)
+  }
+  return ((data ?? []) as InviteRow[]).map(toInviteDTO)
+}
+
+export async function listInvites(restaurantId: unknown): Promise<InviteDTO[]> {
+  const id = uuidSchema.parse(restaurantId)
+  await requireRestaurantAdmin(id)
+
+  const supabase = await db()
+  const { data, error } = await supabase
+    .from('invites')
+    .select(INVITE_COLUMNS)
     .eq('restaurant_id', id)
     .order('created_at', { ascending: false })
 
   if (error) {
     throw new Error(`Não foi possível listar convites: ${error.message}`)
   }
-
-  return (data ?? []).map((row) => ({
-    id: row.id as string,
-    role: row.role as MembershipRole,
-    email: row.email as string | null,
-    expiresAt: row.expires_at as string,
-    redeemedAt: row.redeemed_at as string | null,
-    revokedAt: row.revoked_at as string | null,
-  }))
+  return ((data ?? []) as InviteRow[]).map(toInviteDTO)
 }
 
 export async function revokeInvite(inviteId: unknown): Promise<void> {
   const id = uuidSchema.parse(inviteId)
-  await requirePlatformAdmin()
 
   const supabase = await db()
+  // Descobrimos o dono do convite ANTES de autorizar. Convite de plataforma
+  // é da plataforma; convite de equipe é do administrador daquele
+  // restaurante. Confiar num id vindo do cliente seria a brecha de IDOR.
+  const { data: row, error: lookupError } = await supabase
+    .from('invites')
+    .select('restaurant_id')
+    .eq('id', id)
+    .single()
+
+  if (lookupError || !row) throw new UserFacingError('Convite não encontrado.')
+
+  if (row.restaurant_id === null) await requirePlatformAdmin()
+  else await requireRestaurantAdmin(row.restaurant_id)
+
   const { error } = await supabase
     .from('invites')
     .update({ revoked_at: new Date().toISOString() })
@@ -114,6 +211,7 @@ export async function revokeInvite(inviteId: unknown): Promise<void> {
     action: 'invite.revoked',
     subjectType: 'invite',
     subjectId: id,
+    restaurantId: row.restaurant_id ?? undefined,
   })
 }
 
@@ -121,7 +219,7 @@ export async function previewInvite(
   token: unknown,
 ): Promise<InvitePreviewDTO | null> {
   // Rate limit ANTES de qualquer consulta. Sem isso, o endpoint vira um
-  // oraculo para adivinhar tokens por forca bruta.
+  // oráculo para adivinhar tokens por força bruta.
   await enforceRateLimit('invite:preview', await rateLimitIdentity())
 
   const parsed = inviteTokenSchema.safeParse(token)
@@ -132,11 +230,14 @@ export async function previewInvite(
     p_token: parsed.data,
   })
 
+  // Token desconhecido, vencido, revogado e já resgatado devolvem todos zero
+  // linhas. As quatro situações são indistinguíveis daqui, que é o ponto.
   if (error || !data || data.length === 0) return null
 
   return {
-    restaurantName: data[0].restaurant_name as string,
-    role: data[0].invite_role as MembershipRole,
+    kind: data[0].invite_kind as InviteKind,
+    restaurantName: data[0].restaurant_name as string | null,
+    role: data[0].invite_role as MemberRole,
   }
 }
 
@@ -144,15 +245,38 @@ export async function redeemInvite(token: unknown): Promise<string> {
   await enforceRateLimit('invite:redeem', await rateLimitIdentity())
 
   const parsed = inviteTokenSchema.safeParse(token)
-  // Mensagem identica a de token valido porem expirado, revogado ou ja
-  // usado. Nao revelamos qual condicao falhou.
-  if (!parsed.success) throw new Error('Convite inválido')
+  // Mensagem idêntica à de token válido porém expirado, revogado ou já usado.
+  // Não revelamos qual condição falhou.
+  if (!parsed.success) throw new UserFacingError('Convite inválido')
 
   const supabase = await db()
   const { data, error } = await supabase.rpc('redeem_invite', {
     p_token: parsed.data,
   })
 
-  if (error || !data) throw new Error('Convite inválido')
+  if (error || !data) throw new UserFacingError('Convite inválido')
   return data as string
+}
+
+export async function redeemPlatformInvite(input: unknown): Promise<string> {
+  const data = createFromInviteSchema.parse(input)
+  await enforceRateLimit('invite:redeem', await rateLimitIdentity())
+
+  const supabase = await db()
+  const { data: restaurantId, error } = await supabase.rpc(
+    'redeem_platform_invite',
+    { p_token: data.token, p_name: data.name, p_slug: data.slug },
+  )
+
+  if (error) {
+    // A função levanta P0001 SÓ para colisão e formato de endereço, e só
+    // DEPOIS de já ter confirmado o convite. Repassar esse texto é seguro —
+    // quem chegou aqui já provou ter convite válido — e é o que permite a
+    // pessoa corrigir sozinha. Qualquer outro código vira a mensagem opaca.
+    if (error.code === 'P0001') throw new ConflictError(error.message)
+    throw new UserFacingError('Convite inválido')
+  }
+  if (!restaurantId) throw new UserFacingError('Convite inválido')
+
+  return restaurantId as string
 }

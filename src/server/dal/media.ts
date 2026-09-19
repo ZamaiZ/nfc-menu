@@ -1,12 +1,20 @@
 import 'server-only'
 import { randomUUID } from 'node:crypto'
 import { uuidSchema } from '@/domain/common'
-import { MEDIA_LIMITS, registerMediaSchema, type MediaKind } from '@/domain/media'
+import {
+  brandSlotSchema,
+  MEDIA_LIMITS,
+  registerMediaSchema,
+  setBrandImageSchema,
+  type BrandSlot,
+  type MediaKind,
+} from '@/domain/media'
+import { recordAudit } from '@/server/security/audit'
 import { createUserClient } from './_client'
 import {
   ConflictError,
   currentTerritory,
-  requireMember,
+  requireRestaurantAdmin,
   UserFacingError,
 } from './auth'
 
@@ -48,7 +56,7 @@ export async function createUploadTicket(input: {
 
   if (error || !data) throw new UserFacingError('Item não encontrado.')
   const restaurantId = data.restaurant_id
-  await requireMember(restaurantId)
+  await requireRestaurantAdmin(restaurantId)
 
   const extension = EXTENSION_BY_MIME[input.mimeType]
   // O caminho é montado no SERVIDOR, a partir do restaurante resolvido no
@@ -70,6 +78,104 @@ export async function createUploadTicket(input: {
   return { bucket: limits.bucket, path, signedUrl: ticket.signedUrl }
 }
 
+// Irmão do createUploadTicket, para a marca do restaurante. Precisa existir
+// separado porque aquele resolve o restaurante a partir de um ITEM, e logo e
+// capa não pertencem a item nenhum.
+//
+// O caminho continua sendo montado no SERVIDOR, a partir do restaurante
+// resolvido no servidor. O navegador nunca escolhe onde grava: o prefixo é a
+// fronteira do inquilino, e deixar o cliente decidi-lo anularia a política de
+// storage inteira.
+export async function createBrandUploadTicket(input: {
+  restaurantId: string
+  slot: BrandSlot
+  mimeType: string
+}): Promise<{ bucket: string; path: string; signedUrl: string }> {
+  const restaurantId = uuidSchema.parse(input.restaurantId)
+  const slot = brandSlotSchema.parse(input.slot)
+  await requireRestaurantAdmin(restaurantId)
+
+  const limits = MEDIA_LIMITS.image
+  if (!(limits.mimes as readonly string[]).includes(input.mimeType)) {
+    throw new UserFacingError('Formato de arquivo não aceito.')
+  }
+
+  const extension = EXTENSION_BY_MIME[input.mimeType]
+  // `brand` como segundo segmento, e não como primeiro: o primeiro é lido
+  // pela `restaurant_id_from_storage_path` para descobrir o inquilino, e
+  // mudá-lo deixaria a política de storage sem saber de quem é o arquivo.
+  const path = `${restaurantId}/brand/${slot}-${randomUUID()}.${extension}`
+
+  const supabase = await db()
+  // A assinatura também passa pela RLS do storage: se esta sessão não puder
+  // escrever neste caminho, o Supabase recusa aqui.
+  const { data: ticket, error } = await supabase.storage
+    .from(limits.bucket)
+    .createSignedUploadUrl(path)
+
+  if (error || !ticket) {
+    throw new UserFacingError('Não foi possível autorizar o envio.')
+  }
+
+  return { bucket: limits.bucket, path, signedUrl: ticket.signedUrl }
+}
+
+// Grava o caminho novo e APAGA o antigo. Trocar a logo cinco vezes sem esta
+// limpeza deixaria quatro arquivos pagos e inalcançáveis — invisíveis,
+// porque nada no banco voltaria a apontar para eles. É o mesmo defeito que a
+// revisão da Fase 2 encontrou na capa de vídeo.
+export async function setBrandImage(input: unknown): Promise<void> {
+  const data = setBrandImageSchema.parse(input)
+  await requireRestaurantAdmin(data.restaurantId)
+
+  const supabase = await db()
+  const { data: atual, error: lookupError } = await supabase
+    .from('restaurants')
+    .select('logo_path, cover_path')
+    .eq('id', data.restaurantId)
+    .single()
+
+  if (lookupError || !atual) {
+    throw new UserFacingError('Restaurante não encontrado.')
+  }
+
+  const anterior =
+    data.slot === 'logo'
+      ? (atual.logo_path as string | null)
+      : (atual.cover_path as string | null)
+
+  // Objeto explícito por ramo, e não chave computada: `{ [coluna]: valor }`
+  // vira uma assinatura de índice genérica, que o tipo gerado do banco recusa
+  // — e com razão, porque ela aceitaria qualquer nome de coluna.
+  const { error } = await supabase
+    .from('restaurants')
+    .update(
+      data.slot === 'logo'
+        ? { logo_path: data.storagePath }
+        : { cover_path: data.storagePath },
+    )
+    .eq('id', data.restaurantId)
+
+  if (error) throw new Error(`Não foi possível salvar: ${error.message}`)
+
+  // A remoção vem DEPOIS da gravação, ao contrário do deleteItemMedia. A
+  // ordem é oposta de propósito: lá a linha some junto, e arquivo órfão é o
+  // pior estado; aqui a linha continua existindo, e apagar antes deixaria o
+  // cardápio apontando para um arquivo que já não existe caso o update
+  // falhasse.
+  if (anterior && anterior !== data.storagePath) {
+    await supabase.storage.from(MEDIA_LIMITS.image.bucket).remove([anterior])
+  }
+
+  await recordAudit({
+    action: 'restaurant.brand_updated',
+    subjectType: 'restaurant',
+    subjectId: data.restaurantId,
+    restaurantId: data.restaurantId,
+    metadata: { slot: data.slot, removed: data.storagePath === null },
+  })
+}
+
 export async function registerItemMedia(input: unknown): Promise<string> {
   const data = registerMediaSchema.parse(input)
 
@@ -82,7 +188,7 @@ export async function registerItemMedia(input: unknown): Promise<string> {
 
   if (lookupError || !item) throw new Error('Item não encontrado')
   const restaurantId = item.restaurant_id as string
-  await requireMember(restaurantId)
+  await requireRestaurantAdmin(restaurantId)
 
   // Revalidamos o prefixo aqui mesmo com o CHECK do banco fazendo o mesmo.
   // O CHECK e a garantia; esta linha e a mensagem de erro decente.
@@ -156,7 +262,7 @@ export async function deleteItemMedia(mediaId: unknown): Promise<void> {
     .single()
 
   if (lookupError || !row) throw new Error('Mídia não encontrada')
-  await requireMember(row.restaurant_id as string)
+  await requireRestaurantAdmin(row.restaurant_id as string)
 
   const bucket = MEDIA_LIMITS[row.kind as MediaKind].bucket
   // Remove o arquivo ANTES da linha. Se a ordem fosse invertida e a segunda

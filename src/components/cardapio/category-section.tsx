@@ -41,12 +41,16 @@ export function CategorySection({
   category,
   index,
   all,
+  canEdit,
   children,
 }: {
   restaurantId: string
   category: OwnerMenuCategoryDTO
   index: number
   all: OwnerMenuCategoryDTO[]
+  /** Só administrador edita. Esconder o controle é cortesia: a DAL e a RLS
+      barram quem chamar a action na mão. */
+  canEdit: boolean
   children: React.ReactNode
 }) {
   const [pending, startTransition] = useTransition()
@@ -121,15 +125,18 @@ export function CategorySection({
           </p>
         </div>
 
-        <ReorderButtons
-          label={`categoria ${category.name}`}
-          isFirst={index === 0}
-          isLast={index === all.length - 1}
-          disabled={pending}
-          onUp={() => move(-1)}
-          onDown={() => move(1)}
-        />
+        {canEdit ? (
+          <ReorderButtons
+            label={`categoria ${category.name}`}
+            isFirst={index === 0}
+            isLast={index === all.length - 1}
+            disabled={pending}
+            onUp={() => move(-1)}
+            onDown={() => move(1)}
+          />
+        ) : null}
 
+        {canEdit ? (
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -161,11 +168,16 @@ export function CategorySection({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        ) : null}
       </header>
 
       {children}
 
-      {/* Irmãos do menu, não filhos: ver o comentário em CategoryDialog. */}
+      {/* Irmãos do menu, não filhos: ver o comentário em CategoryDialog. E
+          montados só para quem edita — diálogo que ninguém consegue abrir é
+          estado a mais na árvore, sem uso. */}
+      {canEdit ? (
+        <>
       <CategoryDialog
         restaurantId={restaurantId}
         category={{
@@ -205,6 +217,8 @@ export function CategorySection({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+        </>
+      ) : null}
     </section>
   )
 }

@@ -1,7 +1,7 @@
-import Link from 'next/link'
-import { RiStore2Line } from 'react-icons/ri'
-import { CreateRestaurantDialog } from '@/components/admin/create-restaurant-dialog'
-import { StatusBadge } from '@/components/admin/status-badge'
+import { RiMailLine } from 'react-icons/ri'
+import { InviteDialog } from '@/components/convites/invite-dialog'
+import { InviteList } from '@/components/convites/invite-list'
+import { PageHeader } from '@/components/shell/page-header'
 import {
   Empty,
   EmptyContent,
@@ -10,83 +10,46 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { requirePlatformAdmin } from '@/server/dal/auth'
-import { listRestaurantsForAdmin } from '@/server/dal/restaurants'
-import { env } from '@/server/env'
+import { listPlatformInvites } from '@/server/dal/invites'
 
-export const metadata = { title: 'Restaurantes' }
+export const metadata = { title: 'Convites' }
 
 export default async function Page() {
-  // O proxy já redirecionou quem não tem cookie, mas checagem otimista não
-  // é autorização. Quem autoriza é esta linha.
+  // O proxy já redirecionou quem não tem cookie, mas checagem otimista não é
+  // autorização. Quem autoriza é esta linha.
   await requirePlatformAdmin()
-  const restaurants = await listRestaurantsForAdmin()
+  const invites = await listPlatformInvites()
 
   return (
-    <main className="mx-auto w-full max-w-[1100px] flex-1 px-4 py-8">
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <h1 className="text-[28px] font-semibold">Restaurantes</h1>
-        {restaurants.length > 0 ? (
-          <CreateRestaurantDialog rootDomain={env.NEXT_PUBLIC_ROOT_DOMAIN} />
-        ) : null}
-      </div>
+    <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-8 sm:px-6">
+      <PageHeader
+        title="Convites"
+        support="Cada convite deixa uma pessoa criar o próprio restaurante."
+      >
+        {invites.length > 0 ? <InviteDialog mode="platform" /> : null}
+      </PageHeader>
 
-      {restaurants.length === 0 ? (
+      {invites.length === 0 ? (
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
-              <RiStore2Line />
+              <RiMailLine />
             </EmptyMedia>
-            <EmptyTitle>Nenhum restaurante ainda</EmptyTitle>
+            <EmptyTitle>Nenhum convite ainda</EmptyTitle>
             <EmptyDescription>
-              Cadastre o primeiro para gerar o convite do dono.
+              Emita o primeiro. Quem receber cria a conta, cria o restaurante e
+              já entra como administrador dele.
             </EmptyDescription>
           </EmptyHeader>
           {/* O vazio traz a ação junto: dizer "está vazio" sem oferecer o
               próximo passo obriga a pessoa a procurar o que fazer. */}
           <EmptyContent>
-            <CreateRestaurantDialog rootDomain={env.NEXT_PUBLIC_ROOT_DOMAIN} />
+            <InviteDialog mode="platform" />
           </EmptyContent>
         </Empty>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Endereço</TableHead>
-              <TableHead>Situação</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {restaurants.map((restaurant) => (
-              // h-14 são os 56px de altura de linha da direção visual.
-              <TableRow key={restaurant.id} className="h-14">
-                <TableCell>
-                  <Link
-                    href={`/restaurantes/${restaurant.id}`}
-                    className="font-medium underline-offset-4 hover:underline"
-                  >
-                    {restaurant.name}
-                  </Link>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  /{restaurant.slug}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={restaurant.status} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <InviteList invites={invites} />
       )}
     </main>
   )

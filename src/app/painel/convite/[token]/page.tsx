@@ -1,10 +1,13 @@
 import { AuthShell } from '@/components/auth/auth-shell'
 import { SignInForm } from '@/components/auth/sign-in-form'
 import { SignUpForm } from '@/components/auth/sign-up-form'
+import { CreateRestaurantStep } from '@/components/onboarding/create-restaurant-step'
 import { AcceptInviteButton } from '@/components/painel/accept-invite-button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { MEMBER_ROLE_LABELS } from '@/domain/invite'
 import { getCurrentUser } from '@/server/dal/auth'
 import { previewInvite } from '@/server/dal/invites'
+import { env } from '@/server/env'
 
 export const metadata = { title: 'Convite' }
 
@@ -29,47 +32,73 @@ export default async function Page({
     )
   }
 
+  const daPlataforma = invite.kind === 'platform'
+
+  // Repare no que esta página NÃO mostra, nos dois casos: quem emitiu, o
+  // e-mail amarrado, ou a data.
+  const titulo = daPlataforma
+    ? 'Crie seu restaurante'
+    : (invite.restaurantName ?? 'Convite')
+
   const user = await getCurrentUser()
 
-  if (user) {
+  if (!user) {
     return (
       <AuthShell
-        title={invite.restaurantName}
-        subtitle={`Você foi convidado a gerenciar este restaurante, entrando como ${user.email ?? 'sua conta'}.`}
+        title={titulo}
+        subtitle={
+          daPlataforma
+            ? 'Você foi convidado a criar seu restaurante. Crie sua conta para começar.'
+            : `Você foi convidado a fazer parte da equipe, como ${MEMBER_ROLE_LABELS[invite.role].toLowerCase()}. Entre ou crie sua conta para aceitar.`
+        }
       >
-        <AcceptInviteButton token={token} />
+        <Tabs defaultValue="criar">
+          <TabsList className="w-full">
+            <TabsTrigger value="criar" className="flex-1">
+              Criar conta
+            </TabsTrigger>
+            <TabsTrigger value="entrar" className="flex-1">
+              Já tenho conta
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="criar" className="pt-6">
+            <SignUpForm />
+          </TabsContent>
+
+          <TabsContent value="entrar" className="pt-6">
+            {/* O destino é esta mesma página: depois de entrar, a pessoa
+                precisa voltar aqui para concluir. O token vive no caminho,
+                então atravessa a autenticação sem se perder. */}
+            <SignInForm next={`/convite/${token}`} />
+          </TabsContent>
+        </Tabs>
       </AuthShell>
     )
   }
 
-  // Repare no que esta página NÃO mostra: quem emitiu o convite, o e-mail
-  // amarrado, ou a data. Apenas o nome do restaurante e o convite existir.
+  if (daPlataforma) {
+    return (
+      <AuthShell
+        title={titulo}
+        subtitle={`Entrando como ${user.email ?? 'sua conta'}. Comece pelo nome.`}
+      >
+        <CreateRestaurantStep
+          token={token}
+          rootDomain={env.NEXT_PUBLIC_ROOT_DOMAIN}
+        />
+      </AuthShell>
+    )
+  }
+
   return (
     <AuthShell
-      title={invite.restaurantName}
-      subtitle="Você foi convidado a gerenciar este restaurante. Entre ou crie sua conta para aceitar."
+      title={titulo}
+      subtitle={`Você foi convidado a fazer parte desta equipe como ${MEMBER_ROLE_LABELS[
+        invite.role
+      ].toLowerCase()}, entrando como ${user.email ?? 'sua conta'}.`}
     >
-      <Tabs defaultValue="criar">
-        <TabsList className="w-full">
-          <TabsTrigger value="criar" className="flex-1">
-            Criar conta
-          </TabsTrigger>
-          <TabsTrigger value="entrar" className="flex-1">
-            Já tenho conta
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="criar" className="pt-6">
-          <SignUpForm />
-        </TabsContent>
-
-        <TabsContent value="entrar" className="pt-6">
-          {/* O destino é esta mesma página: depois de entrar, a pessoa
-              precisa voltar aqui para clicar em aceitar. O token vive no
-              caminho, então atravessa a autenticação sem se perder. */}
-          <SignInForm next={`/convite/${token}`} />
-        </TabsContent>
-      </Tabs>
+      <AcceptInviteButton token={token} />
     </AuthShell>
   )
 }

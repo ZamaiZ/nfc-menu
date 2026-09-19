@@ -1,11 +1,11 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { RiExternalLinkLine, RiRestaurantLine } from 'react-icons/ri'
+import { RiRestaurantLine } from 'react-icons/ri'
 import { CategorySection } from '@/components/cardapio/category-section'
 import { ItemRow } from '@/components/cardapio/item-row'
 import { NewCategoryButton } from '@/components/cardapio/new-category-button'
 import { NewItemButton } from '@/components/cardapio/new-item-button'
-import { Button } from '@/components/ui/button'
+import { PublishBar } from '@/components/painel/publish-bar'
+import { PageHeader } from '@/components/shell/page-header'
 import {
   Empty,
   EmptyContent,
@@ -15,7 +15,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { uuidSchema } from '@/domain/common'
-import { requireUser } from '@/server/dal/auth'
+import { myRole, requireUser } from '@/server/dal/auth'
 import { getMenuForOwner } from '@/server/dal/menu'
 import { getRestaurantForMember } from '@/server/dal/restaurants'
 import { env } from '@/server/env'
@@ -36,35 +36,35 @@ export default async function Page({
   // confirmamos nem que o id existe.
   if (!restaurant) notFound()
 
-  const categories = await getMenuForOwner(restaurant.id)
+  // O papel decide o que APARECE. Quem chamar a action na mão continua barrado
+  // pela DAL e pela RLS — são três camadas dizendo a mesma coisa.
+  const role = await myRole(restaurant.id)
+  const canEdit = role === 'admin'
 
+  const categories = await getMenuForOwner(restaurant.id)
   const publicUrl = `http://${env.NEXT_PUBLIC_ROOT_DOMAIN}/${restaurant.slug}`
 
   return (
-    <main className="mx-auto w-full max-w-[1100px] flex-1 px-4 py-8">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-[28px] font-semibold">{restaurant.name}</h1>
-          <p className="text-muted-foreground">
-            {categories.length}{' '}
-            {categories.length === 1 ? 'categoria' : 'categorias'}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            render={
-              <Link href={publicUrl} target="_blank" rel="noopener noreferrer" />
-            }
-          >
-            <RiExternalLinkLine className="size-4" />
-            Ver cardápio público
-          </Button>
-          {categories.length > 0 ? (
-            <NewCategoryButton restaurantId={restaurant.id} />
-          ) : null}
-        </div>
-      </div>
+    <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-8 sm:px-6">
+      <PageHeader
+        title={restaurant.name}
+        support={`${categories.length} ${
+          categories.length === 1 ? 'categoria' : 'categorias'
+        }`}
+      >
+        {canEdit && categories.length > 0 ? (
+          <NewCategoryButton restaurantId={restaurant.id} />
+        ) : null}
+      </PageHeader>
+
+      {/* O atalho para o cardápio público vive aqui agora, ao lado da situação
+          — que é onde ele faz sentido — e não solto no cabeçalho. */}
+      <PublishBar
+        restaurantId={restaurant.id}
+        status={restaurant.status}
+        publicUrl={publicUrl}
+        canEdit={canEdit}
+      />
 
       {categories.length === 0 ? (
         <Empty>
@@ -73,16 +73,22 @@ export default async function Page({
               <RiRestaurantLine />
             </EmptyMedia>
             <EmptyTitle>Cardápio vazio</EmptyTitle>
+            {/* Dizer "crie uma categoria" para quem não pode criar é pior que
+                não dizer nada. */}
             <EmptyDescription>
-              Comece criando uma categoria, como Entradas ou Bebidas.
+              {canEdit
+                ? 'Comece criando uma categoria, como Entradas ou Bebidas.'
+                : 'O administrador ainda não montou o cardápio.'}
             </EmptyDescription>
           </EmptyHeader>
-          <EmptyContent>
-            <NewCategoryButton
-              restaurantId={restaurant.id}
-              label="Criar primeira categoria"
-            />
-          </EmptyContent>
+          {canEdit ? (
+            <EmptyContent>
+              <NewCategoryButton
+                restaurantId={restaurant.id}
+                label="Criar primeira categoria"
+              />
+            </EmptyContent>
+          ) : null}
         </Empty>
       ) : (
         <div className="space-y-6">
@@ -93,19 +99,22 @@ export default async function Page({
               category={category}
               index={index}
               all={categories}
+              canEdit={canEdit}
             >
               {category.items.length === 0 ? (
                 <div className="px-4 py-8 text-center">
                   <p className="mb-4 text-muted-foreground">
                     Nenhum item nesta categoria.
                   </p>
-                  <NewItemButton
-                    restaurantId={restaurant.id}
-                    categoryId={category.id}
-                    label="Adicionar o primeiro item"
-                    variant="outline"
-                    size="default"
-                  />
+                  {canEdit ? (
+                    <NewItemButton
+                      restaurantId={restaurant.id}
+                      categoryId={category.id}
+                      label="Adicionar o primeiro item"
+                      variant="outline"
+                      size="default"
+                    />
+                  ) : null}
                 </div>
               ) : (
                 <>
@@ -117,14 +126,17 @@ export default async function Page({
                       index={itemIndex}
                       all={category.items}
                       categories={categories}
+                      canEdit={canEdit}
                     />
                   ))}
-                  <div className="px-4 py-3">
-                    <NewItemButton
-                      restaurantId={restaurant.id}
-                      categoryId={category.id}
-                    />
-                  </div>
+                  {canEdit ? (
+                    <div className="px-4 py-3">
+                      <NewItemButton
+                        restaurantId={restaurant.id}
+                        categoryId={category.id}
+                      />
+                    </div>
+                  ) : null}
                 </>
               )}
             </CategorySection>

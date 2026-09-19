@@ -98,6 +98,10 @@ export type PublicMenuDTO = {
     logoPath: string | null
     coverPath: string | null
     contact: Record<string, string>
+    // `unknown` de propósito: a coluna é jsonb livre, e quem sabe a forma
+    // dela é o `themeSchema`, não este DTO. Tipar como `ThemeChoice` aqui
+    // seria mentir sobre um dado que ainda não foi validado.
+    theme: unknown
   }
   categories: MenuCategoryDTO[]
 }

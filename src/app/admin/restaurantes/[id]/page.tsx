@@ -1,13 +1,10 @@
 import { notFound } from 'next/navigation'
-import { IdentityForm } from '@/components/admin/identity-form'
 import { SlugForm } from '@/components/admin/slug-form'
 import { StatusBadge } from '@/components/admin/status-badge'
 import { StatusForm } from '@/components/admin/status-form'
-import { TeamSection } from '@/components/admin/team-section'
+import { PageHeader } from '@/components/shell/page-header'
 import { uuidSchema } from '@/domain/common'
 import { requirePlatformAdmin } from '@/server/dal/auth'
-import { listInvites } from '@/server/dal/invites'
-import { listMembers } from '@/server/dal/members'
 import { getRestaurantForAdmin } from '@/server/dal/restaurants'
 import { env } from '@/server/env'
 
@@ -27,33 +24,21 @@ export default async function Page({
   const restaurant = await getRestaurantForAdmin(parsed.data)
   if (!restaurant || restaurant.deletedAt) notFound()
 
-  // As duas consultas são independentes: buscar em paralelo evita somar as
-  // latências.
-  const [members, invites] = await Promise.all([
-    listMembers(restaurant.id),
-    listInvites(restaurant.id),
-  ])
-
   return (
-    <main className="mx-auto w-full max-w-[1100px] flex-1 px-4 py-8">
-      <div className="mb-8 flex items-center gap-4">
-        <h1 className="text-[28px] font-semibold">{restaurant.name}</h1>
+    <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-8 sm:px-6">
+      <PageHeader title={restaurant.name}>
         <StatusBadge status={restaurant.status} />
-      </div>
+      </PageHeader>
 
+      {/* Identidade e equipe saíram daqui. Identidade é do dono, e equipe é
+          do administrador do restaurante — as duas vivem no painel agora. O
+          que sobra no console é o que continua sendo privilégio da
+          plataforma: o endereço e a suspensão. */}
       <div className="space-y-8">
-        <section className="rounded-lg border border-border p-6">
-          <h2 className="mb-6 text-xl font-semibold">Identidade</h2>
-          <IdentityForm
-            restaurantId={restaurant.id}
-            name={restaurant.name}
-            description={restaurant.description}
-            contact={restaurant.contact}
-          />
-        </section>
-
-        <section className="rounded-lg border border-border p-6">
-          <h2 className="mb-6 text-xl font-semibold">Endereço público</h2>
+        <section className="rounded-xl border border-border bg-surface-2 p-6 shadow-[var(--shadow-1)]">
+          <h2 className="mb-6 font-heading text-section font-semibold">
+            Endereço público
+          </h2>
           <SlugForm
             restaurantId={restaurant.id}
             slug={restaurant.slug}
@@ -61,18 +46,11 @@ export default async function Page({
           />
         </section>
 
-        <section className="rounded-lg border border-border p-6">
-          <h2 className="mb-6 text-xl font-semibold">Situação</h2>
+        <section className="rounded-xl border border-border bg-surface-2 p-6 shadow-[var(--shadow-1)]">
+          <h2 className="mb-6 font-heading text-section font-semibold">
+            Situação
+          </h2>
           <StatusForm restaurantId={restaurant.id} status={restaurant.status} />
-        </section>
-
-        <section className="rounded-lg border border-border p-6">
-          <h2 className="mb-6 text-xl font-semibold">Equipe e convites</h2>
-          <TeamSection
-            restaurantId={restaurant.id}
-            members={members}
-            invites={invites}
-          />
         </section>
       </div>
     </main>

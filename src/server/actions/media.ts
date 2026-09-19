@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import type { MediaKind } from '@/domain/media'
+import type { BrandSlot, MediaKind } from '@/domain/media'
 import * as dal from '@/server/dal/media'
 import { runAction, type ActionResult } from './result'
 
@@ -11,6 +11,23 @@ export async function createUploadTicketAction(input: {
   mimeType: string
 }): Promise<ActionResult<{ bucket: string; path: string; signedUrl: string }>> {
   return runAction(() => dal.createUploadTicket(input))
+}
+
+export async function createBrandUploadTicketAction(input: {
+  restaurantId: string
+  slot: BrandSlot
+  mimeType: string
+}): Promise<ActionResult<{ bucket: string; path: string; signedUrl: string }>> {
+  return runAction(() => dal.createBrandUploadTicket(input))
+}
+
+export async function setBrandImageAction(
+  input: unknown,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await dal.setBrandImage(input)
+    revalidatePath('/')
+  })
 }
 
 export async function registerItemMediaAction(

@@ -12,7 +12,7 @@ import { updateRestaurantProfileAction } from '@/server/actions/restaurants'
 
 type State = ActionResult | undefined
 
-export function IdentityForm({
+export function ProfileForm({
   restaurantId,
   name,
   description,
@@ -40,7 +40,7 @@ export function IdentityForm({
   )
 
   useEffect(() => {
-    if (state?.ok) toast.add({ title: 'Identidade salva', type: 'success' })
+    if (state?.ok) toast.add({ title: 'Dados salvos', type: 'success' })
   }, [state])
 
   return (

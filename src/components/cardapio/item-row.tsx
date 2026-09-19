@@ -44,12 +44,16 @@ export function ItemRow({
   index,
   all,
   categories,
+  canEdit,
 }: {
   restaurantId: string
   item: OwnerMenuItemDTO
   index: number
   all: OwnerMenuItemDTO[]
   categories: OwnerMenuCategoryDTO[]
+  /** Só administrador edita. O nome, o preço e a miniatura continuam à vista
+      de qualquer membro — consultar preço no salão é uso real. */
+  canEdit: boolean
 }) {
   const [pending, startTransition] = useTransition()
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -142,7 +146,10 @@ export function ItemRow({
       </div>
 
       {/* A única ação pensada para o polegar: sem diálogo, sem confirmação,
-          retorno imediato. É o que se faz no meio do serviço. */}
+          retorno imediato. É o que se faz no meio do serviço. Mesmo assim é
+          escrita, e escrita é do administrador — para quem não é, a linha
+          mostra a situação como TEXTO, sem interruptor. */}
+      {canEdit ? (
       <label className="flex items-center gap-2 text-sm">
         <span className="text-muted-foreground">
           {available ? 'Disponível' : 'Esgotado'}
@@ -154,16 +161,24 @@ export function ItemRow({
           aria-label={`${item.name} disponível`}
         />
       </label>
+      ) : (
+        <span className="text-sm text-muted-foreground">
+          {available ? 'Disponível' : 'Esgotado'}
+        </span>
+      )}
 
-      <ReorderButtons
-        label={`item ${item.name}`}
-        isFirst={index === 0}
-        isLast={index === all.length - 1}
-        disabled={pending}
-        onUp={() => move(-1)}
-        onDown={() => move(1)}
-      />
+      {canEdit ? (
+        <ReorderButtons
+          label={`item ${item.name}`}
+          isFirst={index === 0}
+          isLast={index === all.length - 1}
+          disabled={pending}
+          onUp={() => move(-1)}
+          onDown={() => move(1)}
+        />
+      ) : null}
 
+      {canEdit ? (
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -187,9 +202,13 @@ export function ItemRow({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      ) : null}
 
       {/* Irmãos do menu, não filhos: diálogo dentro de menu suspenso some
-          junto com o menu e nunca chega a aparecer. */}
+          junto com o menu e nunca chega a aparecer. Montados só para quem
+          edita. */}
+      {canEdit ? (
+        <>
       <ItemEditDialog
         item={item}
         categories={categories}
@@ -216,6 +235,8 @@ export function ItemRow({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+        </>
+      ) : null}
     </div>
   )
 }

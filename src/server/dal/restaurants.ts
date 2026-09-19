@@ -1,8 +1,9 @@
 import 'server-only'
-import { slugSchema, uuidSchema } from '@/domain/common'
+import { plainTextSchema, slugSchema, uuidSchema } from '@/domain/common'
 import {
-  createRestaurantSchema,
+  setPublishedSchema,
   setRestaurantStatusSchema,
+  updateIdentitySchema,
   updateRestaurantProfileSchema,
   updateSlugSchema,
   type RestaurantDetailDTO,
@@ -11,14 +12,20 @@ import {
   type RestaurantPublicDTO,
   type RestaurantStatus,
 } from '@/domain/restaurant'
+import { contrastRatio } from '@/lib/color'
+import { nextSlugCandidate, slugify } from '@/lib/slug'
+import { isBaseInRange, PRESETS } from '@/lib/theme/presets'
 import { recordAudit } from '@/server/security/audit'
+import { rateLimitIdentity } from '@/server/security/client-ip'
+import { enforceRateLimit } from '@/server/security/rate-limit'
 import { createUserClient } from './_client'
 import {
   ConflictError,
   currentTerritory,
-  requireOwner,
+  requireRestaurantAdmin,
   requirePlatformAdmin,
   requireUser,
+  UserFacingError,
 } from './auth'
 
 async function db() {
@@ -30,6 +37,7 @@ type AdminRow = {
   slug: string
   name: string
   status: RestaurantStatus
+  segment: string | null
   created_at: string
   deleted_at: string | null
 }
@@ -40,55 +48,17 @@ function toAdminDTO(row: AdminRow): RestaurantAdminDTO {
     slug: row.slug,
     name: row.name,
     status: row.status,
+    segment: row.segment,
     createdAt: row.created_at,
     deletedAt: row.deleted_at,
   }
-}
-
-export async function createRestaurant(
-  input: unknown,
-): Promise<RestaurantAdminDTO> {
-  const data = createRestaurantSchema.parse(input)
-  const user = await requirePlatformAdmin()
-
-  const supabase = await db()
-  const { data: row, error } = await supabase
-    .from('restaurants')
-    .insert({
-      slug: data.slug,
-      name: data.name,
-      description: data.description ?? null,
-      created_by: user.id,
-    })
-    .select('id, slug, name, status, created_at, deleted_at')
-    .single()
-
-  if (error) {
-    // 23505 é violação de unicidade. O único unique desta tabela é o slug,
-    // então aqui isso significa endereço já em uso — condição prevista,
-    // que a pessoa consegue corrigir sozinha trocando uma palavra.
-    if (error.code === '23505') {
-      throw new ConflictError('Este endereço já está em uso.')
-    }
-    throw new Error(`Não foi possível criar o restaurante: ${error.message}`)
-  }
-
-  await recordAudit({
-    action: 'restaurant.created',
-    subjectType: 'restaurant',
-    subjectId: row.id,
-    restaurantId: row.id,
-    metadata: { slug: row.slug },
-  })
-
-  return toAdminDTO(row as AdminRow)
 }
 
 export async function updateRestaurantProfile(input: unknown): Promise<void> {
   const data = updateRestaurantProfileSchema.parse(input)
   // Autorizacao por POSSE do recurso, nao so por estar autenticado. E o
   // que fecha IDOR: saber o id de outro restaurante nao basta.
-  await requireOwner(data.restaurantId)
+  await requireRestaurantAdmin(data.restaurantId)
 
   const supabase = await db()
   const { error } = await supabase
@@ -133,6 +103,132 @@ export async function setRestaurantStatus(input: unknown): Promise<void> {
   })
 }
 
+export async function setPublished(input: unknown): Promise<void> {
+  const data = setPublishedSchema.parse(input)
+  await requireRestaurantAdmin(data.restaurantId)
+
+  const supabase = await db()
+
+  if (data.published) {
+    // Publicar cardápio vazio só produz cliente confuso na mesa. A conferência
+    // é uma consulta, e não uma regra de banco, porque "ao menos um item
+    // visível" muda com o produto, e travar isso num CHECK seria rigidez.
+    const { count, error: countError } = await supabase
+      .from('menu_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('restaurant_id', data.restaurantId)
+      .eq('is_visible', true)
+
+    if (countError) {
+      throw new Error(`Não foi possível conferir o cardápio: ${countError.message}`)
+    }
+    if ((count ?? 0) === 0) {
+      throw new UserFacingError(
+        'Adicione ao menos um item visível antes de publicar o cardápio.',
+      )
+    }
+  }
+
+  const { error } = await supabase
+    .from('restaurants')
+    .update({ status: data.published ? 'active' : 'draft' })
+    .eq('id', data.restaurantId)
+
+  if (error) {
+    // O gatilho do 0011 recusa entrar ou sair de 'suspended' para quem não é
+    // plataforma. Traduzir aqui evita mostrar errcode do Postgres na tela.
+    if (error.code === '42501') {
+      throw new UserFacingError(
+        'Este restaurante está suspenso. Fale com o administrador da plataforma.',
+      )
+    }
+    throw new Error(`Não foi possível alterar a publicação: ${error.message}`)
+  }
+
+  await recordAudit({
+    action: data.published ? 'restaurant.published' : 'restaurant.unpublished',
+    subjectType: 'restaurant',
+    subjectId: data.restaurantId,
+    restaurantId: data.restaurantId,
+  })
+}
+
+// O assistente pergunta isto a cada tecla digitada. O balde é o mesmo do
+// preview de convite, porque sem limite este endpoint vira um enumerador
+// barato de endereços — ainda que o endereço já seja público por natureza.
+export async function checkSlug(candidate: unknown): Promise<boolean> {
+  await requireUser()
+  await enforceRateLimit('invite:preview', await rateLimitIdentity())
+
+  const parsed = slugSchema.safeParse(candidate)
+  // Endereço fora do formato nunca chega ao banco.
+  if (!parsed.success) return false
+
+  const supabase = await db()
+  const { data, error } = await supabase.rpc('is_slug_available', {
+    p_slug: parsed.data,
+  })
+  return !error && data === true
+}
+
+// Deriva do nome e, se já existir, sufixa até achar um livre. O teto de dez
+// existe porque onze restaurantes com o mesmo nome é outro problema, e um
+// laço sem teto contra o banco é um pedido de negação de serviço.
+export async function suggestSlug(name: unknown): Promise<string | null> {
+  const parsedName = plainTextSchema(120, 2).safeParse(name)
+  if (!parsedName.success) return null
+
+  const base = slugify(parsedName.data)
+  if (await checkSlug(base)) return base
+
+  for (let attempt = 2; attempt <= 10; attempt += 1) {
+    const candidate = nextSlugCandidate(base, attempt)
+    if (await checkSlug(candidate)) return candidate
+  }
+  return null
+}
+
+export async function updateIdentity(input: unknown): Promise<void> {
+  const data = updateIdentitySchema.parse(input)
+  await requireRestaurantAdmin(data.restaurantId)
+
+  // A faixa do preset e o contraste são conferidos AQUI, no servidor, e não
+  // só no seletor de cor. Um seletor é conveniência; a regra é isto.
+  if (data.theme.base && !isBaseInRange(data.theme.preset, data.theme.base)) {
+    throw new UserFacingError(
+      'Esta cor de fundo não combina com o tema escolhido. Escolha um tom dentro da faixa sugerida.',
+    )
+  }
+
+  if (data.theme.accent) {
+    const preset = PRESETS[data.theme.preset]
+    const base = data.theme.base ?? preset.light.base
+    // 3:1 é o piso do WCAG para texto grande e elemento de interface, que é
+    // onde o destaque aparece: preço, rótulo de categoria, botão.
+    if (contrastRatio(base, data.theme.accent) < 3) {
+      throw new UserFacingError(
+        'Esta cor de destaque não contrasta o suficiente com o fundo. Escolha um tom mais escuro ou mais claro.',
+      )
+    }
+  }
+
+  const supabase = await db()
+  const { error } = await supabase
+    .from('restaurants')
+    .update({ segment: data.segment ?? null, theme: data.theme })
+    .eq('id', data.restaurantId)
+
+  if (error) throw new Error(`Não foi possível salvar: ${error.message}`)
+
+  await recordAudit({
+    action: 'restaurant.identity_updated',
+    subjectType: 'restaurant',
+    subjectId: data.restaurantId,
+    restaurantId: data.restaurantId,
+    metadata: { preset: data.theme.preset, segment: data.segment ?? null },
+  })
+}
+
 export async function softDeleteRestaurant(
   restaurantId: unknown,
 ): Promise<void> {
@@ -161,7 +257,7 @@ export async function listRestaurantsForAdmin(): Promise<RestaurantAdminDTO[]> {
   const supabase = await db()
   const { data, error } = await supabase
     .from('restaurants')
-    .select('id, slug, name, status, created_at, deleted_at')
+    .select('id, slug, name, status, segment, created_at, deleted_at')
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(`Não foi possível listar: ${error.message}`)
@@ -179,7 +275,7 @@ export async function listMyRestaurants(): Promise<RestaurantMemberDTO[]> {
   const { data, error } = await supabase
     .from('restaurants')
     .select(
-      'id, slug, name, description, status, logo_path, cover_path, contact, memberships!inner(user_id)',
+      'id, slug, name, description, status, logo_path, cover_path, contact, segment, theme, memberships!inner(user_id)',
     )
     .is('deleted_at', null)
     .order('name')
@@ -195,6 +291,8 @@ export async function listMyRestaurants(): Promise<RestaurantMemberDTO[]> {
     logoPath: row.logo_path as string | null,
     coverPath: row.cover_path as string | null,
     contact: (row.contact ?? {}) as Record<string, string>,
+    segment: row.segment as string | null,
+    theme: row.theme,
   }))
 }
 
@@ -207,7 +305,9 @@ export async function getRestaurantForMember(
   const supabase = await db()
   const { data, error } = await supabase
     .from('restaurants')
-    .select('id, slug, name, description, status, logo_path, cover_path, contact')
+    .select(
+      'id, slug, name, description, status, logo_path, cover_path, contact, segment, theme',
+    )
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle()
@@ -223,6 +323,8 @@ export async function getRestaurantForMember(
     logoPath: data.logo_path as string | null,
     coverPath: data.cover_path as string | null,
     contact: (data.contact ?? {}) as Record<string, string>,
+    segment: data.segment as string | null,
+    theme: data.theme,
   }
 }
 
