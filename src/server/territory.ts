@@ -26,6 +26,18 @@ export function territoryFromHost(host: string | null): Territory {
   return 'site'
 }
 
+// O protocolo é DERIVADO do domínio, e não lido de uma variável de ambiente.
+// Em desenvolvimento o domínio é `localhost:3000`, que não tem TLS; em
+// qualquer outro, tem. Uma variável a mais seria uma a mais para alguém
+// esquecer de configurar — e o sintoma disso só apareceria em produção, num
+// link que não abre.
+export function protocolPadrao(): string {
+  const semPorta = stripPort(env.NEXT_PUBLIC_ROOT_DOMAIN)
+  return semPorta === 'localhost' || semPorta === '127.0.0.1'
+    ? 'http:'
+    : 'https:'
+}
+
 export function originFor(territory: Territory, protocol: string): string {
   const root = env.NEXT_PUBLIC_ROOT_DOMAIN
   if (territory === 'admin') return `${protocol}//${ADMIN_PREFIX}${root}`

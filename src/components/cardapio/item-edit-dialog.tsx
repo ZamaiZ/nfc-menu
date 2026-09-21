@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -24,7 +24,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/components/ui/toast'
 import type { OwnerMenuCategoryDTO, OwnerMenuItemDTO } from '@/domain/menu'
 import { updateItemAction } from '@/server/actions/menu'
-import { MediaEditor } from './media-editor'
+import { MediaEditor, type MediaEditorHandle } from './media-editor'
 import { VariantsEditor } from './variants-editor'
 
 export function ItemEditDialog({
@@ -42,6 +42,7 @@ export function ItemEditDialog({
   const [available, setAvailable] = useState(item.isAvailable)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const editorRef = useRef<MediaEditorHandle>(null)
 
   async function submit(formData: FormData) {
     setPending(true)
@@ -67,18 +68,56 @@ export function ItemEditDialog({
       isAvailable: available,
     })
 
+    if (!result.ok) {
+      setPending(false)
+      setError(result.error)
+      return
+    }
+
+    // A confirmação das mídias é ESTE botão. Não entra botão novo: escolher
+    // o arquivo e salvar o item são a mesma intenção, e separá-los criaria
+    // dois passos para uma decisão só.
+    const midiasOk = (await editorRef.current?.enviarPendentes(item.id)) ?? true
+
     setPending(false)
 
-    if (result.ok) {
+    if (midiasOk) {
       toast.add({ title: 'Item salvo', type: 'success' })
       onOpenChange(false)
       return
     }
-    setError(result.error)
+
+    // Fica ABERTO quando alguma mídia falhou: o item foi salvo, mas fechar
+    // aqui esconderia o erro e o dono só descobriria no cardápio público.
+    setError(
+      'O item foi salvo, mas alguma mídia não subiu. Veja o motivo em cada uma.',
+    )
+  }
+
+  // Fechar com pendente pede confirmação. Sem isso o dono perde arquivo
+  // achando que salvou — e o staging, que existe justamente para não subir
+  // nada por engano, viraria uma forma de perder trabalho.
+  function aoTentarFechar(aberto: boolean) {
+    if (aberto) {
+      onOpenChange(true)
+      return
+    }
+
+    const quantas = editorRef.current?.quantasPendentes() ?? 0
+    if (quantas > 0) {
+      const confirmado = window.confirm(
+        quantas === 1
+          ? 'Você tem 1 arquivo que ainda não foi enviado. Fechar agora descarta ele.'
+          : `Você tem ${quantas} arquivos que ainda não foram enviados. Fechar agora descarta todos.`,
+      )
+      if (!confirmado) return
+    }
+
+    onOpenChange(false)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={aoTentarFechar}>
       {/* Rola por dentro, para os botões não sumirem no fim do rolamento —
           especialmente no celular. */}
       <DialogContent className="max-h-[85dvh] overflow-y-auto">
@@ -175,7 +214,7 @@ export function ItemEditDialog({
 
           <div>
             <h3 className="mb-4 text-base font-semibold">Mídia</h3>
-            <MediaEditor itemId={item.id} media={item.media} />
+            <MediaEditor ref={editorRef} itemId={item.id} media={item.media} />
           </div>
 
           {error ? (
@@ -188,7 +227,9 @@ export function ItemEditDialog({
             <Button
               type="button"
               variant="ghost"
-              onClick={() => onOpenChange(false)}
+              // Passa pela guarda, e não direto: senão o botão "Fechar" seria
+              // a única porta por onde o dono ainda perderia mídia pendente.
+              onClick={() => aoTentarFechar(false)}
             >
               Fechar
             </Button>

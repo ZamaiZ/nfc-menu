@@ -1,15 +1,18 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import * as dal from '@/server/dal/restaurants'
+import {
+  revalidateCaminhoPublico,
+  revalidateListas,
+  revalidateRestaurant,
+} from '@/server/revalidate'
 import { runAction, type ActionResult } from './result'
 
 export async function updateRestaurantProfileAction(
   input: unknown,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.updateRestaurantProfile(input)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.updateRestaurantProfile(input))
   })
 }
 
@@ -17,8 +20,10 @@ export async function setPublishedAction(
   input: unknown,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.setPublished(input)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.setPublished(input))
+    // A lista mostra a situação de cada restaurante, e publicar muda
+    // exatamente isso.
+    revalidateListas()
   })
 }
 
@@ -26,8 +31,7 @@ export async function updateIdentityAction(
   input: unknown,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.updateIdentity(input)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.updateIdentity(input))
   })
 }
 
@@ -49,8 +53,8 @@ export async function setRestaurantStatusAction(
   input: unknown,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.setRestaurantStatus(input)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.setRestaurantStatus(input))
+    revalidateListas()
   })
 }
 
@@ -58,8 +62,8 @@ export async function softDeleteRestaurantAction(
   restaurantId: unknown,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.softDeleteRestaurant(restaurantId)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.softDeleteRestaurant(restaurantId))
+    revalidateListas()
   })
 }
 
@@ -67,7 +71,11 @@ export async function updateRestaurantSlugAction(
   input: unknown,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.updateRestaurantSlug(input)
-    revalidatePath('/')
+    const { slugAnterior, ...alvo } = await dal.updateRestaurantSlug(input)
+    revalidateRestaurant(alvo)
+    // O endereço antigo também: sem esta linha `/{slugAnterior}` continuaria
+    // servindo um cardápio que mudou de endereço.
+    revalidateCaminhoPublico(slugAnterior)
+    revalidateListas()
   })
 }

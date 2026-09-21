@@ -38,6 +38,21 @@ function applyTheme(theme: Theme) {
     (theme === 'system' &&
       window.matchMedia('(prefers-color-scheme: dark)').matches)
   document.documentElement.classList.toggle('dark', isDark)
+  document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+}
+
+function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false
+  return (
+    ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) ||
+    target.isContentEditable
+  )
+}
+
+function nextTheme(theme: Theme): Theme {
+  if (theme === 'system') return 'light'
+  if (theme === 'light') return 'dark'
+  return 'system'
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -71,6 +86,23 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       // Sem persistencia em janela privada. A escolha vale para a sessao.
     }
   }, [])
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.repeat || isEditableTarget(event.target)) return
+      const altGraph = event.getModifierState('AltGraph')
+      const matches =
+        event.code === 'KeyT' &&
+        event.altKey &&
+        (event.ctrlKey || altGraph)
+      if (!matches) return
+      event.preventDefault()
+      setTheme(nextTheme(theme))
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [setTheme, theme])
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>

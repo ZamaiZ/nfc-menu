@@ -25,20 +25,24 @@ export default async function Page({
   if (!restaurant || restaurant.deletedAt) notFound()
 
   return (
-    <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-8 sm:px-6">
-      <PageHeader title={restaurant.name}>
-        <StatusBadge status={restaurant.status} />
-      </PageHeader>
+    <main className="tavvi-page">
+      <PageHeader
+        eyebrow="Restaurante"
+        title={restaurant.name}
+        description={`/${restaurant.slug}`}
+        actions={<StatusBadge status={restaurant.status} />}
+      />
 
       {/* Identidade e equipe saíram daqui. Identidade é do dono, e equipe é
           do administrador do restaurante — as duas vivem no painel agora. O
           que sobra no console é o que continua sendo privilégio da
           plataforma: o endereço e a suspensão. */}
       <div className="space-y-8">
-        <section className="rounded-xl border border-border bg-surface-2 p-6 shadow-[var(--shadow-1)]">
-          <h2 className="mb-6 font-heading text-section font-semibold">
+        <section className="tavvi-surface p-5 sm:p-7">
+          <h2 className="mb-1 text-lg font-semibold tracking-[-0.02em]">
             Endereço público
           </h2>
+          <p className="mb-6 text-sm text-muted-foreground">Defina a URL usada pelos clientes para abrir o cardápio.</p>
           <SlugForm
             restaurantId={restaurant.id}
             slug={restaurant.slug}
@@ -46,10 +50,11 @@ export default async function Page({
           />
         </section>
 
-        <section className="rounded-xl border border-border bg-surface-2 p-6 shadow-[var(--shadow-1)]">
-          <h2 className="mb-6 font-heading text-section font-semibold">
+        <section className="tavvi-surface p-5 sm:p-7">
+          <h2 className="mb-1 text-lg font-semibold tracking-[-0.02em]">
             Situação
           </h2>
+          <p className="mb-6 text-sm text-muted-foreground">Controle a disponibilidade deste restaurante na plataforma.</p>
           <StatusForm restaurantId={restaurant.id} status={restaurant.status} />
         </section>
       </div>

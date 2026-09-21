@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { MediaEditor, type MediaEditorHandle } from '@/components/cardapio/media-editor'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -21,8 +22,13 @@ import { Spinner } from '@/components/ui/spinner'
 import { toast } from '@/components/ui/toast'
 import { createItemAction } from '@/server/actions/menu'
 
-// Campos mínimos, por decisão C6: mídia precisa do id do item, que ainda não
-// existe antes de salvar. Descrição, variações e fotos ficam para a edição.
+// A decisão C6 da Fase 2 dizia: sem mídia aqui, porque ela precisa do id do
+// item, que ainda não existe antes de salvar. Era verdade enquanto o arquivo
+// subia no instante em que era escolhido.
+//
+// Com o STAGING da Fase 5 deixou de ser: os arquivos ficam em blob, o item
+// nasce, e só então eles sobem. O editor entra em modo `itemId={null}`, que é
+// exatamente este caso.
 export function ItemCreateDialog({
   restaurantId,
   categoryId,
@@ -36,6 +42,7 @@ export function ItemCreateDialog({
 }) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const editorRef = useRef<MediaEditorHandle>(null)
 
   async function submit(formData: FormData) {
     setPending(true)
@@ -60,24 +67,61 @@ export function ItemCreateDialog({
       dietaryTags: [],
     })
 
+    if (!result.ok) {
+      setPending(false)
+      setError(result.error)
+      return
+    }
+
+    // O item NASCEU. Só agora as pendentes têm para onde ir.
+    //
+    // Se a criação tivesse falhado, nada subiria — e é isso que faz o dono
+    // corrigir o preço sem perder os arquivos que já escolheu.
+    const midiasOk =
+      (await editorRef.current?.enviarPendentes(result.data.id)) ?? true
+
     setPending(false)
 
-    if (result.ok) {
+    if (midiasOk) {
       toast.add({ title: 'Item criado', type: 'success' })
       onOpenChange(false)
       return
     }
-    setError(result.error)
+
+    setError(
+      'O item foi criado, mas alguma mídia não subiu. Veja o motivo em cada uma.',
+    )
+  }
+
+  // Fechar com pendente pede confirmação: aqui o risco é maior que na edição,
+  // porque nem o item existe ainda.
+  function aoTentarFechar(aberto: boolean) {
+    if (aberto) {
+      onOpenChange(true)
+      return
+    }
+
+    const quantas = editorRef.current?.quantasPendentes() ?? 0
+    if (quantas > 0) {
+      const confirmado = window.confirm(
+        quantas === 1
+          ? 'Você tem 1 arquivo que ainda não foi enviado. Fechar agora descarta ele.'
+          : `Você tem ${quantas} arquivos que ainda não foram enviados. Fechar agora descarta todos.`,
+      )
+      if (!confirmado) return
+    }
+
+    onOpenChange(false)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={aoTentarFechar}>
+      <DialogContent className="max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo item</DialogTitle>
           <DialogDescription>
-            Descrição, variações e fotos você acrescenta depois, editando o
-            item.
+            Já dá para escolher as fotos e os vídeos aqui. Eles sobem quando
+            você criar o item.
           </DialogDescription>
         </DialogHeader>
 
@@ -106,6 +150,13 @@ export function ItemCreateDialog({
             </Field>
           </FieldGroup>
 
+          <div>
+            <h3 className="mb-3 text-base font-semibold">Fotos e vídeos</h3>
+            {/* `itemId={null}`: o editor só ACUMULA. Quem envia é o `submit`,
+                depois que `createItemAction` devolve o id. */}
+            <MediaEditor ref={editorRef} itemId={null} media={[]} />
+          </div>
+
           {error ? (
             <p role="alert" className="text-sm text-destructive">
               {error}
@@ -116,7 +167,7 @@ export function ItemCreateDialog({
             <Button
               type="button"
               variant="ghost"
-              onClick={() => onOpenChange(false)}
+              onClick={() => aoTentarFechar(false)}
             >
               Cancelar
             </Button>

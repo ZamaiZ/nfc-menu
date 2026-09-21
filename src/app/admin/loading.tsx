@@ -2,12 +2,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Loading() {
   return (
-    <main className="mx-auto w-full max-w-[1100px] flex-1 px-4 py-8">
+    <main className="tavvi-page">
       <div className="mb-8 flex items-center justify-between gap-4">
         <Skeleton className="h-9 w-56" />
         <Skeleton className="h-10 w-44" />
       </div>
-      <div className="space-y-2">
+      <div className="tavvi-surface space-y-2 p-3">
         {/* Alturas iguais às da tabela real, para a tela não pular quando o
             conteúdo chega. */}
         {[0, 1, 2, 3].map((row) => (

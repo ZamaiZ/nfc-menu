@@ -1,22 +1,20 @@
-import { TopBar } from '@/components/shell/top-bar'
-import { getCurrentUser } from '@/server/dal/auth'
-
-export default async function PainelLayout({
+export default function PainelLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Sem requireUser aqui: este layout também envolve /entrar e
-  // /convite/{token}, que precisam ser alcançáveis sem sessão.
-  const user = await getCurrentUser()
-
-  // `territorio-painel` troca a face de título pela serifada, e com isso todo
-  // Card, Dialog, Sheet e Empty daqui para baixo herda o display sem saber
-  // que existe território. O console não recebe a classe.
-  return (
-    <div className="territorio-painel flex min-h-dvh flex-col">
-      {user ? <TopBar title="Painel do restaurante" email={user.email} /> : null}
-      {children}
-    </div>
-  )
+  // Este layout NÃO monta a casca, e é de propósito.
+  //
+  // Ele envolve `/entrar` e `/convite/{token}`, que não têm sessão e não
+  // devem ter navegação; envolve `/` , que virou desvio na Fase 4; e envolve
+  // as telas de restaurante, cuja navegação depende de um id que só o layout
+  // de `restaurantes/[id]` conhece.
+  //
+  // Montar a casca aqui obrigaria ou a duplicar `SidebarProvider` — dois
+  // provedores aninhados, um recolhendo o outro — ou a inventar um caminho
+  // para o filho alimentar o pai. Cada contexto monta a própria casca.
+  //
+  // `territorio-painel` marca as superfícies privadas e aplica os tokens
+  // Tavvi, incluindo Inter, sem interferir no cardápio público.
+  return <div className="territorio-painel flex min-h-dvh flex-col">{children}</div>
 }

@@ -3,6 +3,13 @@ import type { NextConfig } from 'next'
 const ROOT = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'localhost:3000'
 const IS_PROD = process.env.NODE_ENV === 'production'
 
+// O host do storage sai da propria variavel de ambiente: em desenvolvimento
+// o Supabase pode ser local e na nuvem e https://<projeto>.supabase.co.
+// Escrever o host a mao quebraria um dos dois.
+const SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL)
+  : null
+
 // Em desenvolvimento o Next precisa de 'unsafe-eval' para o refresh rapido.
 // Em producao ele sai. CSP estrita com nonce fica para a Fase 3, quando
 // existir HTML publico de verdade para proteger.
@@ -35,6 +42,25 @@ const nextConfig: NextConfig = {
   // O servidor de desenvolvimento tambem precisa aceitar os subdominios,
   // senao os assets de /_next nao chegam em admin.localhost:3000.
   allowedDevOrigins: [`admin.${ROOT}`, `painel.${ROOT}`],
+
+  // O feed desenha foto em tela cheia. Servir o arquivo original, no tamanho
+  // em que o dono enviou, e o maior desperdicio de banda do app -- e a rede
+  // de uma mesa de restaurante e justamente a pior que existe.
+  //
+  // A CSP NAO muda: o otimizador serve por /_next/image, que ja esta coberto
+  // por `img-src 'self'` na politica montada acima.
+  images: {
+    remotePatterns: SUPABASE
+      ? [
+          {
+            protocol: SUPABASE.protocol.replace(':', '') as 'http' | 'https',
+            hostname: SUPABASE.hostname,
+            port: SUPABASE.port || undefined,
+            pathname: '/storage/v1/object/public/**',
+          },
+        ]
+      : [],
+  },
   async headers() {
     return [
       {

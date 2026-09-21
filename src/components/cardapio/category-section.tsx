@@ -20,6 +20,13 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -107,10 +114,14 @@ export function CategorySection({
   }
 
   return (
-    <section className="rounded-lg border border-border">
-      <header className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
-        <div className="mr-auto">
-          <h2 className="text-xl font-semibold">
+    // `Card` com `CardHeader`, no lugar de `rounded-lg border` montado à mão.
+    // O fio interno fica só ENTRE os itens — conteúdos de mesmo peso —, que é
+    // a regra da Fase 5: fio de 1px em tudo achata, e nada parece estar acima
+    // de nada.
+    <Card className="gap-0 overflow-hidden rounded-[20px] border-border/70 p-0 shadow-[var(--shadow-1)]">
+      <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border/70 bg-muted/20 px-4 py-4 sm:px-5">
+        <div className="min-w-0">
+          <CardTitle className="text-lg font-semibold tracking-[-0.02em]">
             {category.name}
             {/* Oculta é dito por escrito, não só pelo esmaecimento. */}
             {!category.isVisible ? (
@@ -118,60 +129,59 @@ export function CategorySection({
                 Oculta
               </span>
             ) : null}
-          </h2>
-          <p className="text-sm text-muted-foreground">
+          </CardTitle>
+          <CardDescription>
             {category.items.length}{' '}
             {category.items.length === 1 ? 'item' : 'itens'}
-          </p>
+          </CardDescription>
         </div>
 
         {canEdit ? (
-          <ReorderButtons
-            label={`categoria ${category.name}`}
-            isFirst={index === 0}
-            isLast={index === all.length - 1}
-            disabled={pending}
-            onUp={() => move(-1)}
-            onDown={() => move(1)}
-          />
+          <div className="flex shrink-0 items-center gap-2">
+            <ReorderButtons
+              label={`categoria ${category.name}`}
+              isFirst={index === 0}
+              isLast={index === all.length - 1}
+              disabled={pending}
+              onUp={() => move(-1)}
+              onDown={() => move(1)}
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Ações da categoria ${category.name}`}
+                  />
+                }
+              >
+                <RiMore2Line className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                  <RiPencilLine className="size-4" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={toggleVisibility}>
+                  {category.isVisible ? (
+                    <RiEyeOffLine className="size-4" />
+                  ) : (
+                    <RiEyeLine className="size-4" />
+                  )}
+                  {category.isVisible ? 'Ocultar' : 'Mostrar'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setDeleteOpen(true)}>
+                  <RiDeleteBinLine className="size-4" />
+                  Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         ) : null}
+      </CardHeader>
 
-        {canEdit ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Ações da categoria ${category.name}`}
-              />
-            }
-          >
-            <RiMore2Line className="size-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setEditOpen(true)}>
-              <RiPencilLine className="size-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={toggleVisibility}>
-              {category.isVisible ? (
-                <RiEyeOffLine className="size-4" />
-              ) : (
-                <RiEyeLine className="size-4" />
-              )}
-              {category.isVisible ? 'Ocultar' : 'Mostrar'}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setDeleteOpen(true)}>
-              <RiDeleteBinLine className="size-4" />
-              Excluir
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        ) : null}
-      </header>
-
-      {children}
+      <CardContent className="p-0">{children}</CardContent>
 
       {/* Irmãos do menu, não filhos: ver o comentário em CategoryDialog. E
           montados só para quem edita — diálogo que ninguém consegue abrir é
@@ -219,6 +229,6 @@ export function CategorySection({
       </AlertDialog>
         </>
       ) : null}
-    </section>
+    </Card>
   )
 }

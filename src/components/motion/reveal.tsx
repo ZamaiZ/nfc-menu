@@ -1,7 +1,8 @@
 'use client'
 
 import { Children } from 'react'
-import { motion, useReducedMotion } from 'motion/react'
+import { useReducedMotion } from 'motion/react'
+import * as m from 'motion/react-m'
 
 // Entrada só na MONTAGEM. `initial`/`animate` sem `whileInView` e sem `layout`
 // é deliberado: animar a cada renderização faria a lista inteira piscar toda
@@ -25,14 +26,14 @@ export function Reveal({
   if (reduced) return <div className={className}>{children}</div>
 
   return (
-    <motion.div
+    <m.div
       className={className}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.26, delay, ease: [0.16, 1, 0.3, 1] }}
     >
       {children}
-    </motion.div>
+    </m.div>
   )
 }
 

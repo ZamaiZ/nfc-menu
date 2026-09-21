@@ -1,6 +1,8 @@
 'use client'
 
 import { useActionState } from 'react'
+import { RiErrorWarningLine } from 'react-icons/ri'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -38,18 +40,24 @@ export function SignInForm({ next }: { next: string }) {
         </Field>
       </FieldGroup>
 
-      {/* role="alert" faz o leitor de tela anunciar o erro assim que ele
-          aparece. Sem isso, quem navega por teclado submete o formulário e
-          não recebe retorno nenhum. */}
+      {/* `Alert` na tela de entrada, e não um parágrafo vermelho: é a
+          primeira superfície que o dono vê, e "e-mail ou senha incorretos"
+          numa linha solta é fácil de não notar depois de um envio.
+
+          Dentro de DIÁLOGO o parágrafo compacto fica — uma caixa com borda
+          dentro de outra caixa com borda contraria a regra de "menos borda,
+          mais superfície" da própria Fase 5. */}
       {state && !state.ok ? (
-        <p role="alert" className="text-sm text-destructive">
-          {state.error}
-        </p>
+        <Alert variant="destructive" role="alert">
+          <RiErrorWarningLine aria-hidden="true" />
+          <AlertTitle>Não foi possível entrar</AlertTitle>
+          <AlertDescription>{state.error}</AlertDescription>
+        </Alert>
       ) : null}
 
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button type="submit" className="h-11 w-full" disabled={pending}>
         {pending ? <Spinner className="size-4" /> : null}
-        Entrar
+        {pending ? 'Entrando…' : 'Entrar'}
       </Button>
     </form>
   )

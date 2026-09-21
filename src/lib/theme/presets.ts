@@ -15,7 +15,6 @@ export const PRESETS: Record<ThemePresetId, ThemePreset> = {
     ],
     displayFont: 'var(--tf-anton), sans-serif',
     textFont: 'var(--tf-inter), sans-serif',
-    layout: 'foto-grande',
     radius: { block: '4px', photo: '4px' },
     baseRange: { l: [0.08, 0.22], c: [0, 0.04] },
     light: {
@@ -39,7 +38,6 @@ export const PRESETS: Record<ThemePresetId, ThemePreset> = {
     ],
     displayFont: 'var(--tf-bitter), serif',
     textFont: 'var(--tf-inter), sans-serif',
-    layout: 'foto-grande',
     radius: { block: '8px', photo: '8px' },
     baseRange: { l: [0.9, 0.99], c: [0, 0.05] },
     light: {
@@ -61,7 +59,6 @@ export const PRESETS: Record<ThemePresetId, ThemePreset> = {
     ],
     displayFont: 'var(--tf-fraunces), serif',
     textFont: 'var(--tf-inter), sans-serif',
-    layout: 'foto-pequena',
     radius: { block: '14px', photo: '999px' },
     baseRange: { l: [0.92, 0.99], c: [0, 0.04] },
     light: {
@@ -83,7 +80,6 @@ export const PRESETS: Record<ThemePresetId, ThemePreset> = {
     ],
     displayFont: 'var(--tf-cormorant), serif',
     textFont: 'var(--tf-inter), sans-serif',
-    layout: 'sem-foto',
     radius: { block: '0px', photo: '0px' },
     baseRange: { l: [0.93, 1], c: [0, 0.02] },
     light: {
@@ -105,7 +101,6 @@ export const PRESETS: Record<ThemePresetId, ThemePreset> = {
     ],
     displayFont: 'var(--tf-outfit), sans-serif',
     textFont: 'var(--tf-outfit), sans-serif',
-    layout: 'foto-pequena',
     radius: { block: '22px', photo: '999px' },
     baseRange: { l: [0.93, 1], c: [0, 0.05] },
     light: {
@@ -124,7 +119,6 @@ export const PRESETS: Record<ThemePresetId, ThemePreset> = {
     segments: ['Bar', 'Boteco', 'Pub', 'Gastrobar', 'Cachaçaria', 'Izakaya'],
     displayFont: 'var(--tf-space), sans-serif',
     textFont: 'var(--tf-space), sans-serif',
-    layout: 'sem-foto',
     radius: { block: '2px', photo: '2px' },
     baseRange: { l: [0.05, 0.2], c: [0, 0.06] },
     light: {
@@ -143,7 +137,6 @@ export const PRESETS: Record<ThemePresetId, ThemePreset> = {
     segments: ['Japonês', 'Chinês', 'Tailandês', 'Coreano', 'Vietnamita'],
     displayFont: 'var(--tf-zen), sans-serif',
     textFont: 'var(--tf-inter), sans-serif',
-    layout: 'foto-pequena',
     radius: { block: '2px', photo: '2px' },
     baseRange: { l: [0.9, 0.99], c: [0, 0.03] },
     light: {
@@ -162,7 +155,6 @@ export const PRESETS: Record<ThemePresetId, ThemePreset> = {
     segments: ['Doceria', 'Confeitaria', 'Sorveteria', 'Gelateria', 'Churros'],
     displayFont: 'var(--tf-quicksand), sans-serif',
     textFont: 'var(--tf-quicksand), sans-serif',
-    layout: 'cartao',
     radius: { block: '24px', photo: '18px' },
     baseRange: { l: [0.93, 1], c: [0, 0.05] },
     light: {

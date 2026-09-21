@@ -65,6 +65,20 @@ export type MenuMediaDTO = {
   posterPath: string | null
   altText: string | null
   durationMs: number | null
+  /** Ponto que não pode sair do quadro. Vira `object-position` no feed. */
+  focalX: number
+  focalY: number
+  /**
+   * Dimensões do arquivo. `null` nas mídias enviadas antes da Fase 5, que é
+   * quando a compressão passou a gravá-las.
+   *
+   * Em inglês, e não `largura`/`altura`: este DTO já usa `storagePath`,
+   * `posterPath`, `altText`, `durationMs` e `focalX`. Misturar idioma dentro
+   * de um tipo é como se descobre, seis meses depois, que existem dois
+   * campos para a mesma coisa.
+   */
+  width: number | null
+  height: number | null
 }
 
 export type MenuItemDTO = {
@@ -132,7 +146,15 @@ export type OwnerMenuItemDTO = {
     storagePath: string
     posterPath: string | null
     altText: string | null
+    position: number
+    focalX: number
+    focalY: number
   }[]
+  /**
+   * Visível e sem nenhuma mídia. É o que impede a publicação a partir da
+   * Fase 4, e o que faz o item sumir do feed.
+   */
+  semMidia: boolean
 }
 
 export type OwnerMenuCategoryDTO = {

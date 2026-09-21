@@ -22,16 +22,16 @@ export default async function Page() {
   const invites = await listPlatformInvites()
 
   return (
-    <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-8 sm:px-6">
+    <main className="tavvi-page">
       <PageHeader
+        eyebrow="Plataforma"
         title="Convites"
-        support="Cada convite deixa uma pessoa criar o próprio restaurante."
-      >
-        {invites.length > 0 ? <InviteDialog mode="platform" /> : null}
-      </PageHeader>
+        description="Crie acessos seguros para que novos clientes cadastrem e administrem seus restaurantes."
+        actions={invites.length > 0 ? <InviteDialog mode="platform" /> : null}
+      />
 
       {invites.length === 0 ? (
-        <Empty>
+        <Empty className="tavvi-surface min-h-[360px]">
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <RiMailLine />

@@ -3,10 +3,11 @@ import { notFound } from 'next/navigation'
 import { IdentityForm } from '@/components/painel/identity-form'
 import { ProfileForm } from '@/components/painel/profile-form'
 import { Reveal } from '@/components/motion/reveal'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
+import { Progress, ProgressLabel } from '@/components/ui/progress'
 import { uuidSchema } from '@/domain/common'
 import { requireRestaurantAdmin } from '@/server/dal/auth'
-import { getRestaurantForMember } from '@/server/dal/restaurants'
+import { getRestaurantWorkspace } from '@/server/dal/restaurant-workspace'
 
 export const metadata = { title: 'Configurar restaurante' }
 
@@ -24,26 +25,39 @@ export default async function Page({
   const parsed = uuidSchema.safeParse(id)
   if (!parsed.success) notFound()
 
-  const restaurant = await getRestaurantForMember(parsed.data)
-  if (!restaurant) notFound()
+  const workspace = await getRestaurantWorkspace(parsed.data)
+  if (!workspace) notFound()
+  const { restaurant } = workspace
   await requireRestaurantAdmin(restaurant.id)
 
   const { passo } = await searchParams
   const etapa = passo === 'contato' ? 'contato' : 'identidade'
 
   return (
-    <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-8 sm:px-6">
+    <main className="tavvi-page">
       <Reveal>
         <div className="mb-8">
-          <p className="text-micro font-semibold uppercase tracking-[0.12em] text-primary">
-            Passo {etapa === 'identidade' ? '2' : '3'} de 3
-          </p>
-          <h1 className="mt-2 font-heading text-display font-semibold tracking-[-0.01em]">
+          {/* `Progress` no lugar do "Passo 2 de 3" em texto puro. O primitivo
+              existia desde a Fase 1 e nunca tinha sido importado.
+
+              Num assistente o número sozinho não diz quanto falta — a barra
+              diz, e de relance. O texto fica junto porque a barra sozinha não
+              serve a quem usa leitor de tela nem a quem não distingue o
+              preenchimento. */}
+          <Progress
+            value={etapa === 'identidade' ? (2 / 3) * 100 : 100}
+            className="mb-3 max-w-[280px]"
+          >
+            <ProgressLabel className="text-micro font-semibold uppercase tracking-[0.12em] text-primary">
+              Passo {etapa === 'identidade' ? '2' : '3'} de 3
+            </ProgressLabel>
+          </Progress>
+          <h1 className="mt-3 text-[clamp(1.75rem,3vw,2.4rem)] font-semibold leading-tight tracking-[-0.035em]">
             {etapa === 'identidade'
               ? 'A cara do seu cardápio'
               : 'Como te encontram'}
           </h1>
-          <p className="mt-1 text-body text-muted-foreground">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
             {etapa === 'identidade'
               ? 'Escolha o tema e as cores. Dá para mudar depois, quando quiser.'
               : 'Telefone, WhatsApp e endereço viram botões no topo do cardápio.'}
@@ -73,21 +87,24 @@ export default async function Page({
         {/* Pular é visível nos dois passos, e não escondido num canto. O
             restaurante já existe; nada aqui é obrigatório para operar. */}
         <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-border pt-6">
+          {/* Link estilizado, e não Button com `render`: a doc local do Base
+              UI (`button.md:150`) diz que âncora não deve receber semântica
+              de botão pelo `render`. */}
           {etapa === 'identidade' ? (
-            <Button
-              variant="outline"
-              render={<Link href={`/restaurantes/${restaurant.id}/comecar?passo=contato`} />}
+            <Link
+              href={`/restaurantes/${restaurant.id}/comecar?passo=contato`}
+              className={buttonVariants({ variant: 'outline' })}
             >
               Continuar para o contato
-            </Button>
+            </Link>
           ) : null}
 
-          <Button
-            variant="ghost"
-            render={<Link href={`/restaurantes/${restaurant.id}`} />}
+          <Link
+            href={`/restaurantes/${restaurant.id}`}
+            className={buttonVariants({ variant: 'ghost' })}
           >
             {etapa === 'identidade' ? 'Pular e montar o cardápio' : 'Ir para o cardápio'}
-          </Button>
+          </Link>
         </div>
       </Reveal>
     </main>

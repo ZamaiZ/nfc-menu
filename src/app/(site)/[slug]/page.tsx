@@ -1,7 +1,5 @@
 import { notFound } from 'next/navigation'
-import { MenuCategory } from '@/components/cardapio-publico/menu-category'
-import { MenuHeader } from '@/components/cardapio-publico/menu-header'
-import { Stagger } from '@/components/motion/reveal'
+import { MenuFeed } from '@/components/cardapio-publico/menu-feed'
 import { ALL_THEME_FONT_VARIABLES } from '@/lib/fonts'
 import { resolveTheme } from '@/lib/theme/resolve'
 import { getPublicMenu } from '@/server/dal/menu'
@@ -26,7 +24,12 @@ export default async function Page({
       {/* As variáveis das duas faces entram por folha de estilo embutida, e
           não por `style` no elemento, porque `style` não consegue expressar
           media query. A face escura só vale quando o aparelho do cliente
-          pede escuro — e quem decide isso é o celular na mesa, não nós. */}
+          pede escuro — e quem decide isso é o celular na mesa, não nós.
+
+          O seletor é `[data-menu="<preset>"]`, e não uma classe, porque a
+          folha de detalhes renderiza em portal, fora desta árvore: carregando
+          o mesmo `data-menu`, ela é alcançada por esta regra onde quer que o
+          portal a coloque, com a face escura junto. */}
       <style
         dangerouslySetInnerHTML={{
           __html: [
@@ -38,31 +41,14 @@ export default async function Page({
         }}
       />
 
+      {/* `overflow-hidden` e sem rolagem no documento: quem rola são os dois
+          roladores aninhados do feed. */}
       <div
         data-menu={theme.presetId}
-        data-layout={theme.layout}
         data-density={theme.density}
-        className={`menu ${ALL_THEME_FONT_VARIABLES}`}
+        className={`menu relative overflow-hidden ${ALL_THEME_FONT_VARIABLES}`}
       >
-        <MenuHeader
-          name={menu.restaurant.name}
-          description={menu.restaurant.description}
-          logoPath={menu.restaurant.logoPath}
-          coverPath={menu.restaurant.coverPath}
-          contact={menu.restaurant.contact}
-        />
-
-        <main className="mx-auto w-full max-w-[560px] px-5 pb-16">
-          <Stagger>
-            {menu.categories.map((category) => (
-              <MenuCategory
-                key={category.id}
-                category={category}
-                layout={theme.layout}
-              />
-            ))}
-          </Stagger>
-        </main>
+        <MenuFeed menu={menu} presetId={theme.presetId} />
       </div>
     </>
   )

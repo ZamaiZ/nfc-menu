@@ -88,3 +88,95 @@ export function pickByContrast(
 
   return best
 }
+
+// A volta do caminho que `hexToOklch` faz na ida: OKLCH → Oklab → LMS →
+// linear → sRGB. Os coeficientes são a inversa dos da ida, publicados pelo
+// mesmo Björn Ottosson.
+//
+// O grampeamento em 0–255 é a parte que importa para o resto do sistema: um
+// OKLCH pode descrever cor fora do gamute do sRGB, e o que a tela mostra é o
+// valor grampeado. Como o contraste é sempre medido sobre o hex que sai
+// daqui, a conta nunca mente sobre o que o cliente vai ver.
+function fromLinear(channel: number): number {
+  const v =
+    channel <= 0.0031308
+      ? 12.92 * channel
+      : 1.055 * channel ** (1 / 2.4) - 0.055
+  return Math.max(0, Math.min(255, Math.round(v * 255)))
+}
+
+export function oklchToHex({ l, c, h }: Oklch): string {
+  const rad = (h * Math.PI) / 180
+  const a = c * Math.cos(rad)
+  const b = c * Math.sin(rad)
+
+  const lRoot = l + 0.3963377774 * a + 0.2158037573 * b
+  const mRoot = l - 0.1055613458 * a - 0.0638541728 * b
+  const sRoot = l - 0.0894841775 * a - 1.291485548 * b
+
+  const lLms = lRoot ** 3
+  const mLms = mRoot ** 3
+  const sLms = sRoot ** 3
+
+  const r = 4.0767416621 * lLms - 3.3077115913 * mLms + 0.2309699292 * sLms
+  const g = -1.2684380046 * lLms + 2.6097574011 * mLms - 0.3413193965 * sLms
+  const bl = -0.0041960863 * lLms - 0.7034186147 * mLms + 1.707614701 * sLms
+
+  return `#${[r, g, bl]
+    .map((channel) => fromLinear(channel).toString(16).padStart(2, '0'))
+    .join('')}`
+}
+
+// Move a LUMINOSIDADE da cor até ela atingir o piso contra o fundo,
+// preservando croma e matiz. É isto que permite o destaque do dono existir
+// nas duas faces do tema sem virar outra cor: o olho reconhece uma marca
+// pelo matiz e pela saturação, não pela luminosidade.
+//
+// A busca é binária entre a luminosidade atual, que reprova, e o extremo — 1
+// ou 0. Ela converge para o ponto MAIS PRÓXIMO do original que passa, ou
+// seja, o menor desvio possível da cor escolhida, e não um preto ou branco.
+//
+// Devolve null quando nem o extremo atinge o piso. Acontece com croma alto
+// sobre fundo de luminosidade parecida, e o certo aí é recusar a escolha, e
+// não entregar uma cor que o cliente não enxerga.
+export function fitContrast(
+  color: string,
+  background: string,
+  minRatio: number,
+): string | null {
+  if (!isHex(color) || !isHex(background)) return null
+  if (contrastRatio(background, color) >= minRatio) return color
+
+  const { l, c, h } = hexToOklch(color)
+
+  // O fundo decide qual direção tem chance: sobre fundo escuro, clarear;
+  // sobre claro, escurecer. A outra direção é tentada depois, porque croma
+  // alto pode fechar a primeira antes de ela chegar ao piso.
+  const extremos = hexToOklch(background).l < 0.5 ? [1, 0] : [0, 1]
+
+  for (const extremo of extremos) {
+    if (contrastRatio(background, oklchToHex({ l: extremo, c, h })) < minRatio) {
+      continue
+    }
+
+    // `perto` reprova, `longe` aprova. A cada passo o intervalo encolhe na
+    // direção de `perto`, então o resultado é o mínimo movimento que serve.
+    let perto = l
+    let longe = extremo
+    let melhor = oklchToHex({ l: extremo, c, h })
+
+    for (let passo = 0; passo < 24; passo += 1) {
+      const meio = (perto + longe) / 2
+      const candidata = oklchToHex({ l: meio, c, h })
+      if (contrastRatio(background, candidata) >= minRatio) {
+        melhor = candidata
+        longe = meio
+      } else {
+        perto = meio
+      }
+    }
+    return melhor
+  }
+
+  return null
+}

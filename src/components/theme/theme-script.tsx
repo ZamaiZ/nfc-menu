@@ -7,7 +7,7 @@
 //
 // O try/catch nao e decorativo: em janela privada o acesso ao localStorage
 // LANCA, e sem ele a pagina inteira quebraria antes de pintar qualquer coisa.
-const script = `(function(){try{var t=localStorage.getItem("tema");var d=t==="dark"||((!t||t==="system")&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);}catch(e){}})()`
+const script = `(function(){var t="system";try{var s=localStorage.getItem("tema");if(s==="light"||s==="dark"||s==="system")t=s;}catch(e){}var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.style.colorScheme=d?"dark":"light";})()`
 
 export function ThemeScript() {
   // Unico dangerouslySetInnerHTML do projeto, e seguro porque o conteudo e

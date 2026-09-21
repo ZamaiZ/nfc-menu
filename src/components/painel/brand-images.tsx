@@ -1,11 +1,13 @@
 'use client'
 
-import { useRef, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { RiDeleteBinLine, RiImageAddLine } from 'react-icons/ri'
+import { MediaDropzone } from '@/components/cardapio/media-dropzone'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { toast } from '@/components/ui/toast'
 import { BRAND_SLOT_LABELS, MEDIA_LIMITS, type BrandSlot } from '@/domain/media'
+import { comprimirImagem } from '@/lib/media/comprimir-imagem'
 import { publicMediaUrl } from '@/lib/media-url'
 import { uploadToSignedUrl } from '@/lib/upload'
 import {
@@ -27,29 +29,39 @@ function Slot({
   slot: BrandSlot
   path: string | null
 }) {
-  const input = useRef<HTMLInputElement>(null)
   const [atual, setAtual] = useState<string | null>(path)
   const [pending, startTransition] = useTransition()
 
   function enviar(file: File) {
-    if (file.size > MEDIA_LIMITS.image.maxBytes) {
-      toast.add({
-        title: 'Arquivo grande demais',
-        description: `O limite é ${Math.round(MEDIA_LIMITS.image.maxBytes / 1_048_576)} MB.`,
-        type: 'error',
-      })
-      return
-    }
-
     // As actions vão DENTRO de startTransition por virem de manipulador de
     // evento — contrato documentado do Next 16.3.5. Fora dela, a revalidação
     // pode não voltar aplicada e a tela fica velha depois de um envio que
     // deu certo.
     startTransition(async () => {
+      // Comprime ANTES de conferir o teto. A capa é a imagem mais pesada do
+      // sistema, e recusar o original de uma foto que comprimiria bem abaixo
+      // do limite desperdiçaria justamente a compressão.
+      const comprimida = await comprimirImagem(file)
+      const blob = comprimida.blob
+
+      if (blob.size > MEDIA_LIMITS.image.maxBytes) {
+        toast.add({
+          title: 'Arquivo grande demais',
+          description: `Mesmo comprimido ficou em ${(blob.size / 1_048_576).toFixed(1)} MB, e o limite é ${Math.round(MEDIA_LIMITS.image.maxBytes / 1_048_576)} MB.`,
+          type: 'error',
+        })
+        return
+      }
+
+      // O tipo do BLOB, e não o do arquivo: depois da compressão eles
+      // divergem, e mandar o antigo grava no storage um arquivo com
+      // content-type errado — que o navegador depois não desenha.
+      const mimeType = blob.type || file.type
+
       const ticket = await createBrandUploadTicketAction({
         restaurantId,
         slot,
-        mimeType: file.type,
+        mimeType,
       })
       if (!ticket.ok) {
         toast.add({ title: ticket.error, type: 'error' })
@@ -57,7 +69,7 @@ function Slot({
       }
 
       try {
-        await uploadToSignedUrl(ticket.data.signedUrl, file, file.type)
+        await uploadToSignedUrl(ticket.data.signedUrl, blob, mimeType)
       } catch {
         toast.add({ title: 'Não foi possível enviar o arquivo.', type: 'error' })
         return
@@ -94,12 +106,12 @@ function Slot({
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <p className="text-small font-medium">{BRAND_SLOT_LABELS[slot]}</p>
 
       <div
-        className={`mt-2 overflow-hidden rounded-lg border border-border bg-surface-1 ${
-          slot === 'logo' ? 'size-24' : 'h-24 w-full'
+        className={`mt-2 overflow-hidden rounded-xl border border-border bg-surface-1 ${
+          slot === 'logo' ? 'size-24' : 'aspect-[16/7] w-full'
         }`}
       >
         {atual ? (
@@ -116,31 +128,32 @@ function Slot({
         )}
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-2">
-        <input
-          ref={input}
-          type="file"
-          accept={MEDIA_LIMITS.image.mimes.join(',')}
-          className="hidden"
-          onChange={(event) => {
-            const file = event.target.files?.[0]
-            // Limpa o valor para que escolher o MESMO arquivo de novo depois
-            // de um erro volte a disparar o onChange.
-            event.target.value = ''
-            if (file) enviar(file)
+      {/* Dropzone, e não botão — a mesma área de envio do editor de item. Sem
+          isso o painel teria duas experiências de envio, e a capa, que é a
+          imagem mais pesada do sistema, ficaria na pior das duas.
+
+          Mas SEM staging, de propósito: logo e capa gravam sozinhas, na hora,
+          como a Fase 3 decidiu. Envio de arquivo já é uma confirmação por si,
+          e amarrá-lo a um botão de salvar criaria um estado em que o arquivo
+          está no storage e o banco ainda não sabe dele.
+
+          A diferença tem motivo real: mídia de item pertence a um item que
+          PODE NÃO EXISTIR ainda; logo e capa pertencem a um restaurante que
+          sempre existe. */}
+      <div className="mt-3 min-w-0">
+        <MediaDropzone
+          onArquivos={(arquivos) => {
+            const primeiro = arquivos[0]
+            if (primeiro) enviar(primeiro)
           }}
+          aceitos={MEDIA_LIMITS.image.mimes}
+          desabilitado={pending}
+          restantes={1}
         />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={pending}
-          onClick={() => input.current?.click()}
-        >
-          {pending ? <Spinner className="size-4" /> : <RiImageAddLine className="size-4" />}
-          {atual ? 'Trocar' : 'Enviar'}
-        </Button>
-        {atual ? (
+      </div>
+
+      {atual ? (
+        <div className="mt-2">
           <Button
             type="button"
             variant="ghost"
@@ -148,13 +161,19 @@ function Slot({
             disabled={pending}
             onClick={remover}
           >
-            <RiDeleteBinLine className="size-4" />
+            {pending ? (
+              <Spinner className="size-4" />
+            ) : (
+              <RiDeleteBinLine className="size-4" />
+            )}
             Remover
           </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
-      <p className="mt-1.5 text-small text-muted-foreground">{AJUDA[slot]}</p>
+      <p className="mt-2 max-w-[36rem] text-small leading-relaxed text-muted-foreground">
+        {AJUDA[slot]}
+      </p>
     </div>
   )
 }
@@ -169,9 +188,15 @@ export function BrandImages({
   coverPath: string | null
 }) {
   return (
-    <div className="grid gap-6 sm:grid-cols-[auto_minmax(0,1fr)]">
-      <Slot restaurantId={restaurantId} slot="logo" path={logoPath} />
-      <Slot restaurantId={restaurantId} slot="cover" path={coverPath} />
-    </div>
+    <section>
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold tracking-[-0.02em]">Marca e imagens</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Use arquivos nítidos e com pouco texto para funcionar bem em qualquer tela.</p>
+      </div>
+      <div className="grid min-w-0 items-start gap-6 sm:grid-cols-[minmax(180px,0.72fr)_minmax(0,1.28fr)]">
+        <Slot restaurantId={restaurantId} slot="logo" path={logoPath} />
+        <Slot restaurantId={restaurantId} slot="cover" path={coverPath} />
+      </div>
+    </section>
   )
 }

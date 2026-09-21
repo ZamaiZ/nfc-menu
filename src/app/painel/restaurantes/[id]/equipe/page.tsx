@@ -15,7 +15,7 @@ import { inviteStatus } from '@/domain/invite'
 import { requireRestaurantAdmin } from '@/server/dal/auth'
 import { listInvites } from '@/server/dal/invites'
 import { listMembers } from '@/server/dal/members'
-import { getRestaurantForMember } from '@/server/dal/restaurants'
+import { getRestaurantWorkspace } from '@/server/dal/restaurant-workspace'
 
 export const metadata = { title: 'Equipe' }
 
@@ -28,8 +28,9 @@ export default async function Page({
   const parsed = uuidSchema.safeParse(id)
   if (!parsed.success) notFound()
 
-  const restaurant = await getRestaurantForMember(parsed.data)
-  if (!restaurant) notFound()
+  const workspace = await getRestaurantWorkspace(parsed.data)
+  if (!workspace) notFound()
+  const { restaurant } = workspace
   await requireRestaurantAdmin(restaurant.id)
 
   // As duas consultas são independentes: buscar em paralelo evita somar as
@@ -44,17 +45,18 @@ export default async function Page({
   )
 
   return (
-    <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-8 sm:px-6">
+    <main className="tavvi-page">
       <PageHeader
+        eyebrow="Acessos"
         title="Equipe"
-        support="Administrador edita tudo. Caixa, atendente e garçom só consultam."
-      >
-        <InviteDialog mode="team" restaurantId={restaurant.id} />
-      </PageHeader>
+        description="Administradores editam o restaurante. Caixa, atendente e garçom consultam o cardápio e os preços."
+        actions={<InviteDialog mode="team" restaurantId={restaurant.id} />}
+      />
 
+      <div className="tavvi-surface hidden overflow-hidden md:block">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="bg-muted/35">
             <TableHead>Pessoa</TableHead>
             <TableHead className="w-48">Papel</TableHead>
             <TableHead>Desde</TableHead>
@@ -67,10 +69,17 @@ export default async function Page({
           ))}
         </TableBody>
       </Table>
+      </div>
+
+      <div className="grid gap-3 md:hidden">
+        {members.map((member) => (
+          <MemberRow key={member.membershipId} member={member} variant="card" />
+        ))}
+      </div>
 
       {pendentes.length > 0 ? (
         <section className="mt-12">
-          <h2 className="mb-4 font-heading text-section font-semibold">
+          <h2 className="mb-4 text-lg font-semibold tracking-[-0.02em]">
             Convites pendentes
           </h2>
           {/* `showRole` aqui, e não no console: convite de equipe carrega

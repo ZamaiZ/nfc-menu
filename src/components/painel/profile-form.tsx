@@ -2,7 +2,14 @@
 
 import { useActionState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+import {
+  RiInstagramLine,
+  RiMapPinLine,
+  RiPhoneLine,
+  RiWhatsappLine,
+} from 'react-icons/ri'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { IconField } from '@/components/ui/field-icon'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
@@ -44,7 +51,7 @@ export function ProfileForm({
   }, [state])
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} className="tavvi-surface space-y-6 p-5 sm:p-7">
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="name">Nome</FieldLabel>
@@ -59,34 +66,38 @@ export function ProfileForm({
             defaultValue={description ?? ''}
           />
         </Field>
-        <Field>
-          <FieldLabel htmlFor="phone">Telefone</FieldLabel>
-          <Input id="phone" name="phone" defaultValue={contact.phone ?? ''} />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="whatsapp">WhatsApp</FieldLabel>
-          <Input
-            id="whatsapp"
-            name="whatsapp"
-            defaultValue={contact.whatsapp ?? ''}
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="instagram">Instagram</FieldLabel>
-          <Input
-            id="instagram"
-            name="instagram"
-            defaultValue={contact.instagram ?? ''}
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="address">Endereço físico</FieldLabel>
-          <Input
-            id="address"
-            name="address"
-            defaultValue={contact.address ?? ''}
-          />
-        </Field>
+        {/* Os MESMOS ícones que vão para os atalhos do cardápio público. O
+            dono reconhece o que está preenchendo, e reconhece de novo quando
+            vê o resultado na tela do cliente. `IconField` já existia e já era
+            usado em outra tela; aqui era campo sem ícone. */}
+        <IconField
+          id="phone"
+          name="phone"
+          label="Telefone"
+          icon={<RiPhoneLine />}
+          defaultValue={contact.phone ?? ''}
+        />
+        <IconField
+          id="whatsapp"
+          name="whatsapp"
+          label="WhatsApp"
+          icon={<RiWhatsappLine />}
+          defaultValue={contact.whatsapp ?? ''}
+        />
+        <IconField
+          id="instagram"
+          name="instagram"
+          label="Instagram"
+          icon={<RiInstagramLine />}
+          defaultValue={contact.instagram ?? ''}
+        />
+        <IconField
+          id="address"
+          name="address"
+          label="Endereço físico"
+          icon={<RiMapPinLine />}
+          defaultValue={contact.address ?? ''}
+        />
       </FieldGroup>
 
       {state && !state.ok ? (
@@ -95,9 +106,9 @@ export function ProfileForm({
         </p>
       ) : null}
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending} className="min-w-36">
         {pending ? <Spinner className="size-4" /> : null}
-        Salvar identidade
+        {pending ? 'Salvando…' : 'Salvar informações'}
       </Button>
     </form>
   )

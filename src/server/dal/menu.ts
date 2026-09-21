@@ -14,6 +14,8 @@ import {
   type OwnerMenuItemDTO,
   type PublicMenuDTO,
 } from '@/domain/menu'
+import type { AlvoRevalidacao } from '@/server/revalidate'
+import { alvoDoRestaurante } from './_alvo'
 import { createUserClient } from './_client'
 import {
   currentTerritory,
@@ -61,6 +63,12 @@ type RawMedia = {
   alt_text: string | null
   duration_ms: number | null
   position: number
+  focal_x: number
+  focal_y: number
+  // Nulos nas mídias enviadas antes da Fase 5, que é quando a compressão
+  // passou a gravá-los. O feed trata o nulo caindo no `onLoad`.
+  width: number | null
+  height: number | null
 }
 
 type RawItem = {
@@ -102,7 +110,7 @@ export async function getPublicMenu(
            id, name, description, base_price_cents, is_available, is_visible,
            position, dietary_tags,
            menu_item_variants ( id, name, price_cents, is_available, position ),
-           menu_item_media ( kind, storage_path, poster_path, alt_text, duration_ms, position )
+           menu_item_media ( kind, storage_path, poster_path, alt_text, duration_ms, position, focal_x, focal_y, width, height )
          )
        )`,
     )
@@ -128,7 +136,15 @@ export async function getPublicMenu(
       name: category.name,
       description: category.description,
       items: (category.menu_items ?? [])
-        .filter((item) => item.is_visible)
+        // Item sem mídia não entra no feed, nem num cardápio publicado. A
+        // publicação já recusa (ver `setPublished`), mas esta linha cobre o
+        // caminho que a recusa não alcança: apagar a última foto de um prato
+        // com o cardápio JÁ no ar. O item some, o painel avisa, e o cliente
+        // na mesa nunca vê uma coluna vazia.
+        .filter(
+          (item) =>
+            item.is_visible && (item.menu_item_media ?? []).length > 0,
+        )
         .sort((a, b) => a.position - b.position)
         .map((item) => ({
           id: item.id,
@@ -153,9 +169,17 @@ export async function getPublicMenu(
               posterPath: media.poster_path,
               altText: media.alt_text,
               durationMs: media.duration_ms,
+              focalX: media.focal_x,
+              focalY: media.focal_y,
+              width: media.width,
+              height: media.height,
             })),
         })),
     }))
+
+  // Categoria que ficou sem item nenhum some do trilho. Um trilho com uma
+  // categoria que não leva a lugar nenhum é pior que um trilho mais curto.
+  const comItens = categories.filter((category) => category.items.length > 0)
 
   return {
     restaurant: {
@@ -167,8 +191,32 @@ export async function getPublicMenu(
       contact: (data.contact ?? {}) as Record<string, string>,
       theme: data.theme,
     },
-    categories,
+    categories: comItens,
   }
+}
+
+// Item visível e sem nenhuma mídia. É o que impede a publicação a partir da
+// Fase 4. A junção é `!left` porque o que se procura é justamente a AUSÊNCIA
+// do lado direito.
+export async function contarItensSemMidia(
+  restaurantId: string,
+): Promise<number> {
+  const supabase = await db()
+  const { data, error } = await supabase
+    .from('menu_items')
+    .select('id, menu_item_media!left ( id )')
+    .eq('restaurant_id', restaurantId)
+    .eq('is_visible', true)
+
+  if (error) {
+    throw new Error(`Não foi possível conferir as fotos: ${error.message}`)
+  }
+
+  return (data ?? []).filter(
+    (item) =>
+      ((item as { menu_item_media: unknown[] }).menu_item_media ?? []).length ===
+      0,
+  ).length
 }
 
 export async function getMenuForOwner(
@@ -186,7 +234,7 @@ export async function getMenuForOwner(
          id, name, description, base_price_cents, is_available, is_visible,
          position, dietary_tags,
          menu_item_variants ( id, name, price_cents, is_available, position ),
-         menu_item_media ( id, kind, storage_path, poster_path, alt_text, position )
+         menu_item_media ( id, kind, storage_path, poster_path, alt_text, position, focal_x, focal_y, width, height )
        )`,
     )
     .eq('restaurant_id', id)
@@ -233,7 +281,14 @@ export async function getMenuForOwner(
             storagePath: media.storage_path,
             posterPath: media.poster_path,
             altText: media.alt_text,
+            position: media.position,
+            focalX: media.focal_x,
+            focalY: media.focal_y,
           })),
+        // Visível e sem nenhuma mídia. É o que impede a publicação e o que
+        // faz o item sumir do feed.
+        semMidia:
+          item.is_visible && (item.menu_item_media ?? []).length === 0,
       })),
   }))
 }
@@ -262,7 +317,14 @@ export async function listCategories(restaurantId: unknown) {
   }))
 }
 
-export async function createCategory(input: unknown): Promise<string> {
+// As escritas devolvem o ALVO da revalidação — id e slug do restaurante
+// afetado. Sem isso a action não teria como saber o que invalidar, e era por
+// isso que todas chamavam `revalidatePath('/')`, que não invalidava nada do
+// que importa. Quem também cria alguma coisa devolve `createdId` junto: `id`
+// já é o do restaurante, e dois `id` no mesmo objeto seria armadilha.
+export async function createCategory(
+  input: unknown,
+): Promise<AlvoRevalidacao & { createdId: string }> {
   const data = createCategorySchema.parse(input)
   await requireRestaurantAdmin(data.restaurantId)
 
@@ -280,12 +342,18 @@ export async function createCategory(input: unknown): Promise<string> {
   if (error) {
     throw new Error(`Não foi possível criar a categoria: ${error.message}`)
   }
-  return row.id as string
+  return {
+    ...(await alvoDoRestaurante(data.restaurantId)),
+    createdId: row.id as string,
+  }
 }
 
-export async function updateCategory(input: unknown): Promise<void> {
+export async function updateCategory(
+  input: unknown,
+): Promise<AlvoRevalidacao> {
   const data = updateCategorySchema.parse(input)
-  await requireRestaurantAdmin(await ownerRestaurantOf('menu_categories', data.categoryId))
+  const restaurantId = await ownerRestaurantOf('menu_categories', data.categoryId)
+  await requireRestaurantAdmin(restaurantId)
 
   const supabase = await db()
   const { error } = await supabase
@@ -300,20 +368,34 @@ export async function updateCategory(input: unknown): Promise<void> {
   if (error) {
     throw new Error(`Não foi possível salvar a categoria: ${error.message}`)
   }
+  return alvoDoRestaurante(restaurantId)
 }
 
-export async function deleteCategory(categoryId: unknown): Promise<void> {
+export async function deleteCategory(
+  categoryId: unknown,
+): Promise<AlvoRevalidacao> {
   const id = uuidSchema.parse(categoryId)
-  await requireRestaurantAdmin(await ownerRestaurantOf('menu_categories', id))
+  const restaurantId = await ownerRestaurantOf('menu_categories', id)
+  await requireRestaurantAdmin(restaurantId)
+
+  // O alvo é lido ANTES do delete. Depois, a linha da categoria não existe
+  // mais — mas o restaurante sim, então buscar o alvo aqui também
+  // funcionaria. Fica antes por hábito: para item e variação a ordem também
+  // não importa, mas para qualquer escrita futura que apague o restaurante
+  // importaria, e uma forma só é mais fácil de manter certa.
+  const alvo = await alvoDoRestaurante(restaurantId)
 
   const supabase = await db()
   const { error } = await supabase.from('menu_categories').delete().eq('id', id)
   if (error) {
     throw new Error(`Não foi possível remover a categoria: ${error.message}`)
   }
+  return alvo
 }
 
-export async function reorderCategories(input: unknown): Promise<void> {
+export async function reorderCategories(
+  input: unknown,
+): Promise<AlvoRevalidacao> {
   const data = reorderSchema.parse(input)
   await requireRestaurantAdmin(data.restaurantId)
 
@@ -330,9 +412,12 @@ export async function reorderCategories(input: unknown): Promise<void> {
 
     if (error) throw new Error(`Não foi possível reordenar: ${error.message}`)
   }
+  return alvoDoRestaurante(data.restaurantId)
 }
 
-export async function createItem(input: unknown): Promise<string> {
+export async function createItem(
+  input: unknown,
+): Promise<AlvoRevalidacao & { createdId: string }> {
   const data = createItemSchema.parse(input)
   await requireRestaurantAdmin(data.restaurantId)
 
@@ -353,12 +438,16 @@ export async function createItem(input: unknown): Promise<string> {
   // Se a categoria for de outro restaurante, quem recusa e a chave
   // estrangeira composta -- nao um if em TypeScript.
   if (error) throw new Error(`Não foi possível criar o item: ${error.message}`)
-  return row.id as string
+  return {
+    ...(await alvoDoRestaurante(data.restaurantId)),
+    createdId: row.id as string,
+  }
 }
 
-export async function updateItem(input: unknown): Promise<void> {
+export async function updateItem(input: unknown): Promise<AlvoRevalidacao> {
   const data = updateItemSchema.parse(input)
-  await requireRestaurantAdmin(await ownerRestaurantOf('menu_items', data.itemId))
+  const restaurantId = await ownerRestaurantOf('menu_items', data.itemId)
+  await requireRestaurantAdmin(restaurantId)
 
   const supabase = await db()
   const { error } = await supabase
@@ -377,18 +466,22 @@ export async function updateItem(input: unknown): Promise<void> {
     .eq('id', data.itemId)
 
   if (error) throw new Error(`Não foi possível salvar o item: ${error.message}`)
+  return alvoDoRestaurante(restaurantId)
 }
 
-export async function deleteItem(itemId: unknown): Promise<void> {
+export async function deleteItem(itemId: unknown): Promise<AlvoRevalidacao> {
   const id = uuidSchema.parse(itemId)
-  await requireRestaurantAdmin(await ownerRestaurantOf('menu_items', id))
+  const restaurantId = await ownerRestaurantOf('menu_items', id)
+  await requireRestaurantAdmin(restaurantId)
+  const alvo = await alvoDoRestaurante(restaurantId)
 
   const supabase = await db()
   const { error } = await supabase.from('menu_items').delete().eq('id', id)
   if (error) throw new Error(`Não foi possível remover o item: ${error.message}`)
+  return alvo
 }
 
-export async function reorderItems(input: unknown): Promise<void> {
+export async function reorderItems(input: unknown): Promise<AlvoRevalidacao> {
   const data = reorderSchema.parse(input)
   await requireRestaurantAdmin(data.restaurantId)
 
@@ -402,11 +495,15 @@ export async function reorderItems(input: unknown): Promise<void> {
 
     if (error) throw new Error(`Não foi possível reordenar: ${error.message}`)
   }
+  return alvoDoRestaurante(data.restaurantId)
 }
 
-export async function setItemAvailability(input: unknown): Promise<void> {
+export async function setItemAvailability(
+  input: unknown,
+): Promise<AlvoRevalidacao> {
   const data = setItemAvailabilitySchema.parse(input)
-  await requireRestaurantAdmin(await ownerRestaurantOf('menu_items', data.itemId))
+  const restaurantId = await ownerRestaurantOf('menu_items', data.itemId)
+  await requireRestaurantAdmin(restaurantId)
 
   const supabase = await db()
   const { error } = await supabase
@@ -417,9 +514,12 @@ export async function setItemAvailability(input: unknown): Promise<void> {
   if (error) {
     throw new Error(`Não foi possível alterar a disponibilidade: ${error.message}`)
   }
+  return alvoDoRestaurante(restaurantId)
 }
 
-export async function createVariant(input: unknown): Promise<string> {
+export async function createVariant(
+  input: unknown,
+): Promise<AlvoRevalidacao & { createdId: string }> {
   const data = createVariantSchema.parse(input)
   const restaurantId = await ownerRestaurantOf('menu_items', data.itemId)
   await requireRestaurantAdmin(restaurantId)
@@ -439,14 +539,21 @@ export async function createVariant(input: unknown): Promise<string> {
   if (error) {
     throw new Error(`Não foi possível criar a variação: ${error.message}`)
   }
-  return row.id as string
+  return {
+    ...(await alvoDoRestaurante(restaurantId)),
+    createdId: row.id as string,
+  }
 }
 
-export async function updateVariant(input: unknown): Promise<void> {
+export async function updateVariant(
+  input: unknown,
+): Promise<AlvoRevalidacao> {
   const data = updateVariantSchema.parse(input)
-  await requireRestaurantAdmin(
-    await ownerRestaurantOf('menu_item_variants', data.variantId),
+  const restaurantId = await ownerRestaurantOf(
+    'menu_item_variants',
+    data.variantId,
   )
+  await requireRestaurantAdmin(restaurantId)
 
   const supabase = await db()
   const { error } = await supabase
@@ -461,11 +568,16 @@ export async function updateVariant(input: unknown): Promise<void> {
   if (error) {
     throw new Error(`Não foi possível salvar a variação: ${error.message}`)
   }
+  return alvoDoRestaurante(restaurantId)
 }
 
-export async function deleteVariant(variantId: unknown): Promise<void> {
+export async function deleteVariant(
+  variantId: unknown,
+): Promise<AlvoRevalidacao> {
   const id = uuidSchema.parse(variantId)
-  await requireRestaurantAdmin(await ownerRestaurantOf('menu_item_variants', id))
+  const restaurantId = await ownerRestaurantOf('menu_item_variants', id)
+  await requireRestaurantAdmin(restaurantId)
+  const alvo = await alvoDoRestaurante(restaurantId)
 
   const supabase = await db()
   const { error } = await supabase
@@ -476,4 +588,5 @@ export async function deleteVariant(variantId: unknown): Promise<void> {
   if (error) {
     throw new Error(`Não foi possível remover a variação: ${error.message}`)
   }
+  return alvo
 }

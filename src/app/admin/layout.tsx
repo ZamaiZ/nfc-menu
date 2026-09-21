@@ -1,5 +1,5 @@
-import { TerritoryNav } from '@/components/shell/territory-nav'
-import { TopBar } from '@/components/shell/top-bar'
+import { TavviShell } from '@/components/shell/tavvi-shell'
+import { getAdminNavigation } from '@/components/shell/navigation'
 import { getCurrentUser } from '@/server/dal/auth'
 
 export default async function AdminLayout({
@@ -12,26 +12,26 @@ export default async function AdminLayout({
   // checagem.
   const user = await getCurrentUser()
 
+  // Sem `territorio-painel`: o console é sóbrio de propósito, e a ausência é
+  // a decisão. Desde a Fase 5 isso importa menos — a serifada saiu da
+  // herança —, mas a classe continua sendo o marcador de território.
+  if (!user) {
+    return <div className="territorio-admin flex min-h-dvh flex-col">{children}</div>
+  }
+
   return (
-    <div className="flex min-h-dvh flex-col">
-      {/* Sem `territorio-painel` aqui, e sem display: o console é sóbrio de
-          propósito. A ausência é a decisão. */}
-      {user ? (
-        <>
-          <TopBar
-            title="Console da plataforma"
-            email={user.email}
-            variant="console"
-          />
-          <TerritoryNav
-            items={[
-              { href: '/', label: 'Convites' },
-              { href: '/restaurantes', label: 'Restaurantes' },
-            ]}
-          />
-        </>
-      ) : null}
-      {children}
+    <div className="territorio-admin min-h-dvh">
+      <TavviShell
+        config={{
+          homeHref: '/',
+          userLabel: user.email,
+          contextLabel: 'Console',
+          contextDescription: 'Administração da plataforma',
+          items: getAdminNavigation(),
+        }}
+      >
+        {children}
+      </TavviShell>
     </div>
   )
 }

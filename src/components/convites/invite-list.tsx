@@ -44,9 +44,11 @@ export function InviteList({
   }
 
   return (
+    <>
+    <div className="tavvi-surface hidden overflow-hidden md:block">
     <Table>
       <TableHeader>
-        <TableRow>
+        <TableRow className="bg-muted/35">
           <TableHead>E-mail</TableHead>
           {showRole ? <TableHead>Papel</TableHead> : null}
           <TableHead>Situação</TableHead>
@@ -58,7 +60,7 @@ export function InviteList({
         {invites.map((invite) => {
           const situacao = inviteStatus(invite)
           return (
-            <TableRow key={invite.id} className="h-14">
+            <TableRow key={invite.id} className="h-16">
               <TableCell>
                 {invite.email ?? (
                   <span className="text-muted-foreground">Qualquer e-mail</span>
@@ -98,5 +100,37 @@ export function InviteList({
         })}
       </TableBody>
     </Table>
+    </div>
+    <div className="grid gap-3 md:hidden">
+      {invites.map((invite) => {
+        const situacao = inviteStatus(invite)
+        return (
+          <article key={invite.id} className="tavvi-surface p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate font-semibold">{invite.email ?? 'Qualquer e-mail'}</p>
+                {showRole ? (
+                  <p className="mt-1 text-sm text-muted-foreground">{MEMBER_ROLE_LABELS[invite.role]}</p>
+                ) : null}
+              </div>
+              <Badge variant={situacao === 'pendente' ? 'default' : 'secondary'}>
+                {INVITE_STATUS_LABELS[situacao]}
+              </Badge>
+            </div>
+            <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/60 pt-3">
+              <p className="text-xs text-muted-foreground">
+                Válido até {new Date(invite.expiresAt).toLocaleDateString('pt-BR')}
+              </p>
+              {situacao === 'pendente' ? (
+                <Button variant="ghost" size="sm" disabled={pending} onClick={() => revoke(invite.id)}>
+                  <RiCloseCircleLine className="size-4" /> Revogar
+                </Button>
+              ) : null}
+            </div>
+          </article>
+        )
+      })}
+    </div>
+    </>
   )
 }

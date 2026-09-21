@@ -11,6 +11,8 @@ import { recordAudit } from '@/server/security/audit'
 import { rateLimitIdentity } from '@/server/security/client-ip'
 import { enforceRateLimit } from '@/server/security/rate-limit'
 import { generateTagToken } from '@/server/security/tokens'
+import type { AlvoRevalidacao } from '@/server/revalidate'
+import { alvoDoRestaurante } from './_alvo'
 import { createUserClient } from './_client'
 import {
   currentTerritory,
@@ -23,7 +25,13 @@ async function db() {
   return createUserClient(await currentTerritory())
 }
 
-export async function createTag(input: unknown): Promise<TagDTO> {
+// `{ tag }` aninhado, e não `TagDTO & AlvoRevalidacao`: as duas formas têm
+// campo `id`, e uma interseção faria o id da plaquinha e o do restaurante
+// disputarem a mesma chave — exatamente o tipo de armadilha silenciosa que
+// esta fase existe para tirar do caminho.
+export async function createTag(
+  input: unknown,
+): Promise<AlvoRevalidacao & { tag: TagDTO }> {
   const data = createTagSchema.parse(input)
   await requirePlatformAdmin()
 
@@ -51,11 +59,14 @@ export async function createTag(input: unknown): Promise<TagDTO> {
         restaurantId: data.restaurantId,
       })
       return {
-        id: row.id as string,
-        publicToken: row.public_token as string,
-        label: row.label as string | null,
-        isActive: row.is_active as boolean,
-        lastSeenAt: row.last_seen_at as string | null,
+        ...(await alvoDoRestaurante(data.restaurantId)),
+        tag: {
+          id: row.id as string,
+          publicToken: row.public_token as string,
+          label: row.label as string | null,
+          isActive: row.is_active as boolean,
+          lastSeenAt: row.last_seen_at as string | null,
+        },
       }
     }
 
@@ -92,7 +103,7 @@ export async function listTags(restaurantId: unknown): Promise<TagDTO[]> {
   }))
 }
 
-export async function updateTag(input: unknown): Promise<void> {
+export async function updateTag(input: unknown): Promise<AlvoRevalidacao> {
   const data = updateTagSchema.parse(input)
 
   const supabase = await db()
@@ -103,7 +114,8 @@ export async function updateTag(input: unknown): Promise<void> {
     .single()
 
   if (lookupError || !row) throw new Error('Plaquinha não encontrada')
-  await requireRestaurantAdmin(row.restaurant_id as string)
+  const restaurantId = row.restaurant_id as string
+  await requireRestaurantAdmin(restaurantId)
 
   // public_token e restaurant_id nao aparecem aqui: o gatilho no banco
   // recusaria a alteracao de qualquer forma.
@@ -115,13 +127,27 @@ export async function updateTag(input: unknown): Promise<void> {
   if (error) {
     throw new Error(`Não foi possível salvar a plaquinha: ${error.message}`)
   }
+
+  return alvoDoRestaurante(restaurantId)
 }
 
-export async function deleteTag(tagId: unknown): Promise<void> {
+export async function deleteTag(tagId: unknown): Promise<AlvoRevalidacao> {
   const id = uuidSchema.parse(tagId)
   await requirePlatformAdmin()
 
   const supabase = await db()
+
+  // O restaurante da plaquinha é lido ANTES do delete: depois, a linha não
+  // existe mais e não haveria de onde tirar o alvo da revalidação.
+  const { data: row, error: lookupError } = await supabase
+    .from('menu_tags')
+    .select('restaurant_id')
+    .eq('id', id)
+    .single()
+
+  if (lookupError || !row) throw new Error('Plaquinha não encontrada')
+  const alvo = await alvoDoRestaurante(row.restaurant_id as string)
+
   const { error } = await supabase.from('menu_tags').delete().eq('id', id)
   if (error) {
     throw new Error(`Não foi possível remover a plaquinha: ${error.message}`)
@@ -132,6 +158,8 @@ export async function deleteTag(tagId: unknown): Promise<void> {
     subjectType: 'menu_tag',
     subjectId: id,
   })
+
+  return alvo
 }
 
 export async function resolveTag(

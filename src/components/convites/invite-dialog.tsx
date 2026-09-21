@@ -106,11 +106,11 @@ export function InviteDialog(props: InviteDialogProps) {
         {mode === 'platform' ? 'Novo convite' : 'Convidar alguém'}
       </DialogTrigger>
 
-      <DialogContent>
+      <DialogContent className="rounded-[24px] p-6 sm:p-7">
         {link === null ? (
           <>
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="text-xl font-semibold tracking-[-0.02em]">
                 {mode === 'platform' ? 'Novo convite' : 'Convidar para a equipe'}
               </DialogTitle>
               <DialogDescription>
@@ -172,9 +172,9 @@ export function InviteDialog(props: InviteDialogProps) {
                 <Button type="button" variant="ghost" onClick={reset}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={pending}>
+                <Button type="submit" disabled={pending} className="min-w-28">
                   {pending ? <Spinner className="size-4" /> : null}
-                  Gerar link
+                  {pending ? 'Gerando link…' : 'Gerar link'}
                 </Button>
               </DialogFooter>
             </form>
@@ -182,7 +182,7 @@ export function InviteDialog(props: InviteDialogProps) {
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Convite criado</DialogTitle>
+              <DialogTitle className="text-xl font-semibold tracking-[-0.02em]">Convite criado</DialogTitle>
               <DialogDescription>
                 Copie o link agora. Ele não será exibido de novo.
               </DialogDescription>

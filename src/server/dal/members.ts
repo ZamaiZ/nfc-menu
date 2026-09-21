@@ -5,7 +5,9 @@ import {
   type MemberDTO,
   type MemberRole,
 } from '@/domain/invite'
+import type { AlvoRevalidacao } from '@/server/revalidate'
 import { recordAudit } from '@/server/security/audit'
+import { alvoDoRestaurante } from './_alvo'
 import { createUserClient } from './_client'
 import { currentTerritory, requireRestaurantAdmin, UserFacingError } from './auth'
 
@@ -68,7 +70,9 @@ async function assertNotLastAdmin(
   }
 }
 
-export async function changeMemberRole(input: unknown): Promise<void> {
+export async function changeMemberRole(
+  input: unknown,
+): Promise<AlvoRevalidacao> {
   const data = changeMemberRoleSchema.parse(input)
 
   const supabase = await db()
@@ -85,7 +89,11 @@ export async function changeMemberRole(input: unknown): Promise<void> {
 
   // Trocar um papel pelo mesmo papel não é erro, é nada. Sair cedo evita uma
   // escrita e um registro de auditoria sobre um evento que não aconteceu.
-  if (row.role === data.role) return
+  //
+  // O alvo volta mesmo assim: revalidar o que não mudou custa uma varrida de
+  // cache e nada mais, e devolver a forma certa em todos os caminhos é o que
+  // permite a assinatura ser `Promise<AlvoRevalidacao>` e não anulável.
+  if (row.role === data.role) return alvoDoRestaurante(row.restaurant_id)
 
   if (row.role === 'admin') {
     await assertNotLastAdmin(row.restaurant_id, data.membershipId)
@@ -105,9 +113,13 @@ export async function changeMemberRole(input: unknown): Promise<void> {
     restaurantId: row.restaurant_id,
     metadata: { from: row.role, to: data.role, targetUserId: row.user_id },
   })
+
+  return alvoDoRestaurante(row.restaurant_id)
 }
 
-export async function removeMember(membershipId: unknown): Promise<void> {
+export async function removeMember(
+  membershipId: unknown,
+): Promise<AlvoRevalidacao> {
   const id = uuidSchema.parse(membershipId)
 
   const supabase = await db()
@@ -138,4 +150,6 @@ export async function removeMember(membershipId: unknown): Promise<void> {
     restaurantId: row.restaurant_id,
     metadata: { removedUserId: row.user_id },
   })
+
+  return alvoDoRestaurante(row.restaurant_id)
 }

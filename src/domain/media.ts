@@ -7,20 +7,33 @@ export type MediaKind = z.infer<typeof mediaKindSchema>
 export const IMAGE_BUCKET = 'menu-images'
 export const VIDEO_BUCKET = 'menu-videos'
 
+// Teto por ITEM, não por tipo. O dono não pensa em "quantas imagens e
+// quantos vídeos"; pensa em "quantas telas tem meu prato" — que é o que o
+// cliente rola no feed. Uma regra, um número, uma mensagem de recusa.
+//
+// Substitui os dois `maxPerItem` que existiam até a Fase 4 (4 imagens e 1
+// vídeo, contados à parte). Seis telas verticais já é bastante antes de
+// chegar ao próximo prato.
+//
+// Itens que já têm mais que isso continuam válidos: o teto é conferido só ao
+// inserir, e nada é apagado.
+export const MAX_MIDIAS_POR_ITEM = 6
+
 export const MEDIA_LIMITS = {
   image: {
     bucket: IMAGE_BUCKET,
+    // O teto de peso passa a valer sobre o arquivo JÁ COMPRIMIDO, a partir
+    // da Fase 5. Aplicá-lo ao original recusaria foto de celular que
+    // comprimiria bem abaixo dele.
     maxBytes: 5_242_880,
-    // Teto por item. Não é limite técnico: é o ponto em que a galeria de um
-    // prato deixa de ajudar a decidir e passa a atrapalhar.
-    maxPerItem: 6,
     mimes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif'],
   },
   video: {
     bucket: VIDEO_BUCKET,
+    // Idem: sobre o comprimido. Um vídeo de 40MB do celular comprime para
+    // poucos megabytes, e recusá-lo antes disso desperdiçaria justamente a
+    // compressão que a Fase 5 construiu.
     maxBytes: 10_485_760,
-    // Vídeo é caro em tráfego, e o limite de um já estava na Fase 0.
-    maxPerItem: 1,
     mimes: ['video/mp4', 'video/webm'],
   },
 } as const
@@ -45,6 +58,29 @@ export const setBrandImageSchema = z.object({
   storagePath: z.string().min(1).max(400).nullable(),
 })
 
+// O ponto que o dono marcou como "não pode sair do quadro". Vira
+// `object-position` na hora de desenhar. 0,5/0,5 é o centro, que é o que o
+// `cover` já fazia sozinho.
+const focalSchema = z.number().min(0).max(1)
+
+export const setMediaFocalSchema = z.object({
+  mediaId: uuidSchema,
+  focalX: focalSchema,
+  focalY: focalSchema,
+})
+
+// Mesmo formato do `reorderSchema` de `@/domain/menu`, que já serve
+// categorias e itens. Um formato só de reordenação no projeto inteiro.
+//
+// O teto de 10 é folga sobre o máximo real, que é 4 imagens + 1 vídeo: itens
+// antigos podem ter até 6 imagens, de antes de o teto baixar.
+export const reorderMediaSchema = z.object({
+  itemId: uuidSchema,
+  order: z
+    .array(z.object({ id: uuidSchema, position: z.int().min(0).max(10) }))
+    .min(1),
+})
+
 export const registerMediaSchema = z.object({
   itemId: uuidSchema,
   kind: mediaKindSchema,
@@ -58,4 +94,6 @@ export const registerMediaSchema = z.object({
   // 15 segundos. Validado no navegador; o servidor não consegue conferir
   // duração sem transcodificar. Limitação registrada na spec.
   durationMs: z.int().min(1).max(15_000).optional(),
+  focalX: focalSchema.optional(),
+  focalY: focalSchema.optional(),
 })

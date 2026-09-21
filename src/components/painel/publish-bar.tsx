@@ -8,7 +8,9 @@ import {
   RiGlobalLine,
   RiSendPlaneLine,
 } from 'react-icons/ri'
-import { Button } from '@/components/ui/button'
+import { Copiavel } from '@/components/shell/copiavel'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { toast } from '@/components/ui/toast'
 import type { RestaurantStatus } from '@/domain/restaurant'
@@ -31,11 +33,14 @@ export function PublishBar({
   status,
   publicUrl,
   canEdit,
+  semMidia,
 }: {
   restaurantId: string
   status: RestaurantStatus
   publicUrl: string
   canEdit: boolean
+  /** Itens visíveis sem foto nem vídeo. Zero libera a publicação. */
+  semMidia: number
 }) {
   const [pending, startTransition] = useTransition()
   const [situacao, setSituacao] = useState<RestaurantStatus>(status)
@@ -64,7 +69,12 @@ export function PublishBar({
   const noAr = situacao === 'active'
 
   return (
-    <div className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border border-border bg-surface-2 p-4 shadow-[var(--shadow-1)]">
+    // `Card`, e não `rounded-xl border bg-surface-2` montado à mão. O
+    // primitivo existia desde a Fase 1 e nunca tinha sido importado por
+    // nenhuma tela — era uma das 42 peças do sistema de design que o painel
+    // ignorava, e é por isso que cada superfície tinha números um pouco
+    // diferentes.
+    <Card className="mb-8 flex-row flex-wrap items-center gap-x-4 gap-y-3 rounded-[18px] border-border/70 p-4 shadow-[var(--shadow-1)] sm:p-5">
       <span className="flex items-center gap-2 text-card font-semibold">
         <RiGlobalLine
           className={noAr ? 'size-4 text-status-active' : 'size-4 text-muted-foreground'}
@@ -75,22 +85,40 @@ export function PublishBar({
 
       <p className="text-small text-muted-foreground">{APOIO[situacao]}</p>
 
+      {/* O endereço público passa a ser COPIÁVEL. Ele é a coisa que o dono
+          mais precisa levar para fora do painel — vai na plaquinha, no
+          Instagram, no WhatsApp — e até aqui era texto morto. */}
+      {noAr ? (
+        <Copiavel
+          valor={publicUrl}
+          rotulo="endereço do cardápio"
+          className="w-full sm:w-auto sm:min-w-[18rem]"
+        />
+      ) : null}
+
       <div className="ml-auto flex flex-wrap gap-2">
         {noAr ? (
-          <Button
-            variant="outline"
-            render={
-              <Link href={publicUrl} target="_blank" rel="noopener noreferrer" />
-            }
+          // Link estilizado, e não Button com `render`. A doc local do Base UI
+          // (`button.md:150`) é explícita: âncora tem semântica própria e não
+          // deve receber semântica de botão pelo `render`. Era esta a origem
+          // do erro de console "expected a native <button>".
+          <Link
+            href={publicUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonVariants({ variant: 'outline' })}
           >
             <RiExternalLinkLine className="size-4" />
             Ver no ar
-          </Button>
+          </Link>
         ) : null}
 
         {canEdit && situacao !== 'suspended' ? (
           <Button
-            disabled={pending}
+            // Travar o botão é CORTESIA. A regra é o `setPublished`, que
+            // recusa de novo no servidor — e quem chamar a action na mão
+            // continua barrado.
+            disabled={pending || (!noAr && semMidia > 0)}
             variant={noAr ? 'outline' : 'default'}
             onClick={() => alternar(!noAr)}
           >
@@ -101,10 +129,22 @@ export function PublishBar({
             ) : (
               <RiSendPlaneLine className="size-4" />
             )}
-            {noAr ? 'Despublicar' : 'Publicar cardápio'}
+            {pending
+              ? noAr ? 'Despublicando…' : 'Publicando…'
+              : noAr ? 'Despublicar' : 'Publicar cardápio'}
           </Button>
         ) : null}
       </div>
-    </div>
+
+      {!noAr && semMidia > 0 ? (
+        <p className="w-full text-small text-status-suspended">
+          {semMidia === 1
+            ? 'Um item visível ainda está sem foto nem vídeo.'
+            : `${semMidia} itens visíveis ainda estão sem foto nem vídeo.`}{' '}
+          O cardápio é um feed de fotos — procure a marca{' '}
+          <strong>Sem foto</strong> na lista abaixo.
+        </p>
+      ) : null}
+    </Card>
   )
 }

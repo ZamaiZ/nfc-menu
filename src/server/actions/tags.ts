@@ -1,30 +1,28 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import type { TagDTO } from '@/domain/tag'
 import * as dal from '@/server/dal/tags'
+import { revalidateRestaurant } from '@/server/revalidate'
 import { runAction, type ActionResult } from './result'
 
 export async function createTagAction(
   input: unknown,
 ): Promise<ActionResult<TagDTO>> {
   return runAction(async () => {
-    const tag = await dal.createTag(input)
-    revalidatePath('/')
+    const { tag, ...alvo } = await dal.createTag(input)
+    revalidateRestaurant(alvo)
     return tag
   })
 }
 
 export async function updateTagAction(input: unknown): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.updateTag(input)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.updateTag(input))
   })
 }
 
 export async function deleteTagAction(tagId: unknown): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.deleteTag(tagId)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.deleteTag(tagId))
   })
 }

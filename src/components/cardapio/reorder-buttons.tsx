@@ -19,16 +19,21 @@ export function ReorderButtons({
   onDown: () => void
 }) {
   return (
-    <div className="flex items-center">
+    <div
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-border/70 bg-muted/30 p-0.5"
+      role="group"
+      aria-label={`Ordenar ${label}`}
+    >
       {/* A primeira linha não ganha seta para cima, em vez de ganhar uma
           desabilitada — botão morto parece defeito. O espaço é reservado
           para as linhas não dançarem de largura. */}
       {isFirst ? (
-        <span className="size-9" aria-hidden="true" />
+        <span className="size-8" aria-hidden="true" />
       ) : (
         <Button
           variant="ghost"
           size="icon"
+          className="size-8"
           disabled={disabled}
           onClick={onUp}
           aria-label={`Mover ${label} para cima`}
@@ -38,11 +43,12 @@ export function ReorderButtons({
       )}
 
       {isLast ? (
-        <span className="size-9" aria-hidden="true" />
+        <span className="size-8" aria-hidden="true" />
       ) : (
         <Button
           variant="ghost"
           size="icon"
+          className="size-8"
           disabled={disabled}
           onClick={onDown}
           aria-label={`Mover ${label} para baixo`}
@@ -53,3 +59,4 @@ export function ReorderButtons({
     </div>
   )
 }
+

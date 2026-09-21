@@ -2,6 +2,8 @@
 
 import { useActionState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { RiErrorWarningLine } from 'react-icons/ri'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Field,
@@ -50,15 +52,20 @@ export function SignUpForm() {
         </Field>
       </FieldGroup>
 
+      {/* `Alert` porque esta é tela de entrada, não diálogo: aqui o erro
+          precisa ter forma reconhecível. Ver o comentário em
+          `sign-in-form.tsx`. */}
       {state && !state.ok ? (
-        <p role="alert" className="text-sm text-destructive">
-          {state.error}
-        </p>
+        <Alert variant="destructive" role="alert">
+          <RiErrorWarningLine aria-hidden="true" />
+          <AlertTitle>Não foi possível criar a conta</AlertTitle>
+          <AlertDescription>{state.error}</AlertDescription>
+        </Alert>
       ) : null}
 
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button type="submit" className="h-11 w-full" disabled={pending}>
         {pending ? <Spinner className="size-4" /> : null}
-        Criar conta
+        {pending ? 'Criando conta…' : 'Criar conta'}
       </Button>
     </form>
   )

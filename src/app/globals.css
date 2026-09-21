@@ -9,10 +9,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  /* Indireção deliberada: --font-heading alimenta o título de Card, Dialog,
-     Sheet, Drawer, Empty e AlertDialog. Apontando-o para uma face TROCÁVEL,
-     o painel ganha a serifada em todos eles de uma vez, e o console fica na
-     Inter — sem tocar em nenhum dos oito componentes. */
+  /* Títulos de componentes usam a face do território. Admin e painel
+     apontam para Inter; o pequeno território público mantém sua dupla. */
   --font-heading: var(--heading-face);
   --font-display: var(--display-face);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -79,6 +77,23 @@
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
+
+  /* Ritmo declarado, base 4px. Existe porque até a Fase 5 cada tela escolhia
+     o próprio espaçamento — py-8 aqui, p-4 ali, gap-3 acolá — e é essa
+     variação miúda que fazia o painel parecer montado por partes. */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.5rem;
+  --spacing-6: 2rem;
+  --spacing-7: 3rem;
+  --spacing-8: 4rem;
+
+  /* Uma curva só no produto. É a expo-out que `Reveal` usa desde a Fase 3A:
+     arranca rápido e freia longo, o que faz o movimento parecer resposta do
+     sistema e não enfeite. */
+  --ease-saida: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :root {
@@ -99,11 +114,10 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0.005 85);
   --input: oklch(0.922 0.005 85);
-  --ring: oklch(0.705 0.015 286.067);
+  --ring: oklch(0.56 0.1 186);
 
-  /* As faces trocáveis. O padrão é a Inter nas duas: quem não pedir nada
-     continua exatamente com o visual de antes. É `.territorio-painel`, mais
-     abaixo, que troca a de título pela serifada. */
+  /* A raiz pública mantém a dupla original. Os territórios privados usam
+     Inter sem interferir no cardápio temático. */
   --heading-face: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   --display-face: var(--font-display), ui-serif, Georgia, serif;
 
@@ -133,7 +147,7 @@
   --chart-3: oklch(0.596 0.145 163.225);
   --chart-4: oklch(0.508 0.118 165.612);
   --chart-5: oklch(0.432 0.095 166.913);
-  --radius: 0.45rem;
+  --radius: 0.4rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-primary: oklch(0.6 0.118 184.704);
@@ -141,7 +155,7 @@
   --sidebar-accent: oklch(0.967 0.001 286.375);
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
+  --sidebar-ring: oklch(0.56 0.1 186);
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
 }
@@ -164,7 +178,7 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
+  --ring: oklch(0.704 0.11 182.5);
   --chart-1: oklch(0.845 0.143 164.978);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.596 0.145 163.225);
@@ -177,7 +191,7 @@
   --sidebar-accent: oklch(0.274 0.006 286.033);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
+  --sidebar-ring: oklch(0.704 0.11 182.5);
 
   /* No escuro a pilha INVERTE: o fundo é o mais escuro e cada camada
      clareia. Sombra quase não funciona sobre fundo escuro, então aqui a
@@ -205,6 +219,7 @@
   }
   body {
     @apply bg-background text-foreground text-body;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
     /* Números de largura fixa em toda a interface. Preço que dança quando
        passa de 9 para 10 é exatamente o detalhe que separa produto
        caprichado de andaime. */
@@ -214,10 +229,119 @@
     @apply font-sans;
   }
 
-  /* O painel é onde o dono passa o dia, e ganha a serifada em todo título:
-     página, cartão, diálogo, folha. O console NÃO recebe esta classe, e é
-     assim que ele fica sóbrio sem nenhum componente saber disso. */
+  /* O Tailwind v4 deixou de pôr `cursor: pointer` em botão, seguindo o
+     padrão do navegador. Num produto que o dono usa em desktop o dia
+     inteiro, isso faz cada botão parecer inerte até o clique. A regra volta
+     aqui, uma vez, em vez de uma classe por componente.
+
+     `:not(:disabled)` é a parte que importa: mão sobre botão desativado
+     promete uma ação que não vai acontecer. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  a[href],
+  label[for],
+  summary {
+    cursor: pointer;
+  }
+
+  /* O marcador de território concentra a tipografia privada. A hierarquia
+     vem de peso e escala, não da mistura de famílias. */
+  .territorio-admin,
   .territorio-painel {
-    --heading-face: var(--font-display), ui-serif, Georgia, serif;
+    --heading-face: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    --display-face: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    background: var(--surface-1);
+  }
+
+}
+
+.tavvi-page {
+  width: min(100%, 1180px);
+  margin-inline: auto;
+  padding: 2rem 2rem 4rem;
+}
+
+.tavvi-surface {
+  border: 1px solid color-mix(in oklch, var(--border), transparent 18%);
+  border-radius: 0.6rem;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-1);
+}
+
+@media (max-width: 767px) {
+  .tavvi-page {
+    padding: 1.5rem 1rem calc(7rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* -------------------------------------------------------------------------
+   As três classes abaixo são exigidas por `components/ui/attachment.tsx`,
+   que veio do shadcn SEM elas. Sem estas definições o componente renderiza,
+   mas o estado de "enviando" não anima e a faixa mostra barra de rolagem.
+
+   Ficam fora de `@layer` de propósito: precisam vencer utilitário.
+   ------------------------------------------------------------------------- */
+
+/* Brilho que atravessa o texto enquanto algo está em curso. Aplicado ao
+   TÍTULO do anexo, não ao contêiner: o movimento fica onde o olho já está. */
+@keyframes shimmer-passagem {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--muted-foreground) 0%,
+    var(--foreground) 45%,
+    var(--muted-foreground) 90%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-passagem 1.6s linear infinite;
+}
+
+/* Esmaecimento nas pontas de um rolador horizontal. A máscara some com o
+   conteúdo em vez de cortá-lo numa borda reta, e de quebra avisa que há mais
+   para o lado — coisa que uma borda dura não diz. */
+.scroll-fade-x {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black 12px,
+    black calc(100% - 12px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black 12px,
+    black calc(100% - 12px),
+    transparent 100%
+  );
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Quem pediu menos movimento recebe o texto parado, e não um brilho lento. */
+@media (prefers-reduced-motion: reduce) {
+  .shimmer {
+    animation: none;
+    background-image: none;
+    color: var(--muted-foreground);
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
   }
 }

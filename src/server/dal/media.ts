@@ -3,13 +3,18 @@ import { randomUUID } from 'node:crypto'
 import { uuidSchema } from '@/domain/common'
 import {
   brandSlotSchema,
+  MAX_MIDIAS_POR_ITEM,
   MEDIA_LIMITS,
   registerMediaSchema,
+  reorderMediaSchema,
   setBrandImageSchema,
+  setMediaFocalSchema,
   type BrandSlot,
   type MediaKind,
 } from '@/domain/media'
+import type { AlvoRevalidacao } from '@/server/revalidate'
 import { recordAudit } from '@/server/security/audit'
+import { alvoDoRestaurante } from './_alvo'
 import { createUserClient } from './_client'
 import {
   ConflictError,
@@ -124,7 +129,9 @@ export async function createBrandUploadTicket(input: {
 // limpeza deixaria quatro arquivos pagos e inalcançáveis — invisíveis,
 // porque nada no banco voltaria a apontar para eles. É o mesmo defeito que a
 // revisão da Fase 2 encontrou na capa de vídeo.
-export async function setBrandImage(input: unknown): Promise<void> {
+export async function setBrandImage(
+  input: unknown,
+): Promise<AlvoRevalidacao> {
   const data = setBrandImageSchema.parse(input)
   await requireRestaurantAdmin(data.restaurantId)
 
@@ -174,9 +181,13 @@ export async function setBrandImage(input: unknown): Promise<void> {
     restaurantId: data.restaurantId,
     metadata: { slot: data.slot, removed: data.storagePath === null },
   })
+
+  return alvoDoRestaurante(data.restaurantId)
 }
 
-export async function registerItemMedia(input: unknown): Promise<string> {
+export async function registerItemMedia(
+  input: unknown,
+): Promise<AlvoRevalidacao & { createdId: string }> {
   const data = registerMediaSchema.parse(input)
 
   const supabase = await db()
@@ -212,19 +223,17 @@ export async function registerItemMedia(input: unknown): Promise<string> {
     )
   }
 
-  const limits = MEDIA_LIMITS[data.kind]
-  const sameKind = (siblings ?? []).filter(
-    (row) => row.kind === data.kind,
-  ).length
+  const todas = siblings ?? []
 
-  if (sameKind >= limits.maxPerItem) {
+  // Teto por ITEM, e não por tipo, desde a Fase 5. O dono pensa em "quantas
+  // telas tem meu prato", não em "quantas imagens e quantos vídeos" — e o
+  // cliente, no feed, também não distingue: ele só rola.
+  if (todas.length >= MAX_MIDIAS_POR_ITEM) {
     // ConflictError, nao Error cru: so UserFacingError e suas filhas
     // atravessam o runAction com a mensagem intacta. Um Error comum viraria
     // "Nao foi possivel concluir a operacao" e o dono nao saberia o que fazer.
     throw new ConflictError(
-      data.kind === 'image'
-        ? `Este item já tem ${limits.maxPerItem} imagens. Remova uma para enviar outra.`
-        : 'Este item já tem um vídeo. Remova o atual para enviar outro.',
+      `Este prato já tem ${MAX_MIDIAS_POR_ITEM} telas. Remova uma para enviar outra.`,
     )
   }
 
@@ -234,13 +243,19 @@ export async function registerItemMedia(input: unknown): Promise<string> {
       restaurant_id: restaurantId,
       item_id: data.itemId,
       kind: data.kind,
-      position: sameKind,
+      // A posição conta o item INTEIRO, e não o tipo. Contar por tipo punha
+      // a primeira imagem e o vídeo os dois em 0, e no feed a ordem das
+      // mídias É a ordem das telas: duas em 0 deixam indefinido qual abre o
+      // prato. O TETO continua sendo por tipo, em `sameKind`, acima.
+      position: todas.length,
       storage_path: data.storagePath,
       poster_path: data.posterPath ?? null,
       alt_text: data.altText ?? null,
       width: data.width ?? null,
       height: data.height ?? null,
       duration_ms: data.durationMs ?? null,
+      focal_x: data.focalX ?? 0.5,
+      focal_y: data.focalY ?? 0.5,
     })
     .select('id')
     .single()
@@ -248,10 +263,15 @@ export async function registerItemMedia(input: unknown): Promise<string> {
   if (error) {
     throw new Error(`Não foi possível registrar a mídia: ${error.message}`)
   }
-  return row.id as string
+  return {
+    ...(await alvoDoRestaurante(restaurantId)),
+    createdId: row.id as string,
+  }
 }
 
-export async function deleteItemMedia(mediaId: unknown): Promise<void> {
+export async function deleteItemMedia(
+  mediaId: unknown,
+): Promise<AlvoRevalidacao> {
   const id = uuidSchema.parse(mediaId)
 
   const supabase = await db()
@@ -262,7 +282,9 @@ export async function deleteItemMedia(mediaId: unknown): Promise<void> {
     .single()
 
   if (lookupError || !row) throw new Error('Mídia não encontrada')
-  await requireRestaurantAdmin(row.restaurant_id as string)
+  const restaurantId = row.restaurant_id as string
+  await requireRestaurantAdmin(restaurantId)
+  const alvo = await alvoDoRestaurante(restaurantId)
 
   const bucket = MEDIA_LIMITS[row.kind as MediaKind].bucket
   // Remove o arquivo ANTES da linha. Se a ordem fosse invertida e a segunda
@@ -283,4 +305,66 @@ export async function deleteItemMedia(mediaId: unknown): Promise<void> {
   if (error) {
     throw new Error(`Não foi possível remover a mídia: ${error.message}`)
   }
+  return alvo
+}
+
+export async function setMediaFocal(input: unknown): Promise<AlvoRevalidacao> {
+  const data = setMediaFocalSchema.parse(input)
+
+  const supabase = await db()
+  const { data: row, error: lookupError } = await supabase
+    .from('menu_item_media')
+    .select('restaurant_id')
+    .eq('id', data.mediaId)
+    .single()
+
+  if (lookupError || !row) throw new Error('Mídia não encontrada')
+  const restaurantId = row.restaurant_id as string
+  await requireRestaurantAdmin(restaurantId)
+
+  const { error } = await supabase
+    .from('menu_item_media')
+    .update({ focal_x: data.focalX, focal_y: data.focalY })
+    .eq('id', data.mediaId)
+
+  if (error) {
+    throw new Error(`Não foi possível salvar o enquadramento: ${error.message}`)
+  }
+
+  return alvoDoRestaurante(restaurantId)
+}
+
+export async function reorderItemMedia(
+  input: unknown,
+): Promise<AlvoRevalidacao> {
+  const data = reorderMediaSchema.parse(input)
+
+  const supabase = await db()
+  const { data: item, error: lookupError } = await supabase
+    .from('menu_items')
+    .select('restaurant_id')
+    .eq('id', data.itemId)
+    .single()
+
+  if (lookupError || !item) throw new Error('Item não encontrado')
+  const restaurantId = item.restaurant_id as string
+  await requireRestaurantAdmin(restaurantId)
+
+  // Uma chamada por linha, e não um upsert em lote: o upsert do PostgREST
+  // exige mandar a linha inteira, e mandar colunas que não mudaram abre a
+  // porta para sobrescrever `storage_path` por engano. O teto por item é de
+  // cinco mídias, então cinco chamadas é o pior caso.
+  for (const entry of data.order) {
+    const { error } = await supabase
+      .from('menu_item_media')
+      .update({ position: entry.position })
+      .eq('id', entry.id)
+      // A trava: sem ela, um id de mídia de OUTRO item passaria pela
+      // autorização que acabou de ser feita sobre este item.
+      .eq('item_id', data.itemId)
+
+    if (error) throw new Error(`Não foi possível reordenar: ${error.message}`)
+  }
+
+  return alvoDoRestaurante(restaurantId)
 }

@@ -12,6 +12,7 @@ import {
   type MemberRole,
 } from '@/domain/invite'
 import { createFromInviteSchema } from '@/domain/restaurant'
+import type { AlvoRevalidacao } from '@/server/revalidate'
 import { originFor } from '@/server/territory'
 import { recordAudit } from '@/server/security/audit'
 import { rateLimitIdentity } from '@/server/security/client-ip'
@@ -20,6 +21,7 @@ import {
   generateInviteToken,
   hashInviteTokenForDb,
 } from '@/server/security/tokens'
+import { alvoDoRestaurante } from './_alvo'
 import { createUserClient } from './_client'
 import {
   ConflictError,
@@ -131,21 +133,26 @@ export async function createPlatformInvite(
   })
 }
 
+// `alvo` aninhado, e não interseção: `CreatedInviteDTO` já tem `id`, que é o
+// do convite, e uma interseção com `AlvoRevalidacao` faria ele disputar a
+// chave com o id do restaurante.
 export async function createTeamInvite(
   input: unknown,
-): Promise<CreatedInviteDTO> {
+): Promise<CreatedInviteDTO & { alvo: AlvoRevalidacao }> {
   const data = createTeamInviteSchema.parse(input)
   // Autorização por POSSE do recurso, não só por estar autenticado. É o que
   // fecha IDOR: saber o id de outro restaurante não basta.
   const user = await requireRestaurantAdmin(data.restaurantId)
 
-  return insertInvite({
+  const invite = await insertInvite({
     restaurantId: data.restaurantId,
     role: data.role,
     email: data.email ?? null,
     expiresInDays: data.expiresInDays,
     createdBy: user.id,
   })
+
+  return { ...invite, alvo: await alvoDoRestaurante(data.restaurantId) }
 }
 
 export async function listPlatformInvites(): Promise<InviteDTO[]> {
@@ -181,7 +188,12 @@ export async function listInvites(restaurantId: unknown): Promise<InviteDTO[]> {
   return ((data ?? []) as InviteRow[]).map(toInviteDTO)
 }
 
-export async function revokeInvite(inviteId: unknown): Promise<void> {
+// `null` quando o convite é de PLATAFORMA: não existe restaurante para
+// revalidar, só as listas. É a única escrita do projeto que pode legitimamente
+// não ter alvo.
+export async function revokeInvite(
+  inviteId: unknown,
+): Promise<AlvoRevalidacao | null> {
   const id = uuidSchema.parse(inviteId)
 
   const supabase = await db()
@@ -213,6 +225,8 @@ export async function revokeInvite(inviteId: unknown): Promise<void> {
     subjectId: id,
     restaurantId: row.restaurant_id ?? undefined,
   })
+
+  return row.restaurant_id ? alvoDoRestaurante(row.restaurant_id) : null
 }
 
 export async function previewInvite(
@@ -241,7 +255,10 @@ export async function previewInvite(
   }
 }
 
-export async function redeemInvite(token: unknown): Promise<string> {
+// Devolve o ALVO, e não só o id. Quem resgatou acabou de entrar num
+// restaurante, e a action precisa do slug para revalidar — e do id, que é o
+// que ela já devolvia. Os dois vêm no mesmo objeto.
+export async function redeemInvite(token: unknown): Promise<AlvoRevalidacao> {
   await enforceRateLimit('invite:redeem', await rateLimitIdentity())
 
   const parsed = inviteTokenSchema.safeParse(token)
@@ -255,10 +272,12 @@ export async function redeemInvite(token: unknown): Promise<string> {
   })
 
   if (error || !data) throw new UserFacingError('Convite inválido')
-  return data as string
+  return alvoDoRestaurante(data as string)
 }
 
-export async function redeemPlatformInvite(input: unknown): Promise<string> {
+export async function redeemPlatformInvite(
+  input: unknown,
+): Promise<AlvoRevalidacao> {
   const data = createFromInviteSchema.parse(input)
   await enforceRateLimit('invite:redeem', await rateLimitIdentity())
 
@@ -278,5 +297,5 @@ export async function redeemPlatformInvite(input: unknown): Promise<string> {
   }
   if (!restaurantId) throw new UserFacingError('Convite inválido')
 
-  return restaurantId as string
+  return alvoDoRestaurante(restaurantId as string)
 }

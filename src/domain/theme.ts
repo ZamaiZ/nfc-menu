@@ -55,8 +55,12 @@ export type ThemePreset = {
   /** Variáveis CSS de `@/lib/fonts`, já com a pilha de reserva. */
   displayFont: string
   textFont: string
-  /** Como o item se apresenta. `cartao` é o único em que ele é um objeto. */
-  layout: 'foto-grande' | 'foto-pequena' | 'sem-foto' | 'cartao'
+  /**
+   * `layout` saiu na Fase 4. Ele descrevia como o item se apresentava numa
+   * LISTA — foto grande, foto pequena, sem foto, cartão. O cardápio virou um
+   * feed de tela cheia com mídia obrigatória, e nenhum desses quatro valores
+   * descreve mais nada. Tema passou a ser paleta, tipografia e raio.
+   */
   radius: { block: string; photo: string }
   /**
    * Faixa válida do fundo da face clara, em OKLCH. O dono escolhe DENTRO

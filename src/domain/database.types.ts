@@ -234,6 +234,8 @@ export type Database = {
           alt_text: string | null
           created_at: string
           duration_ms: number | null
+          focal_x: number
+          focal_y: number
           height: number | null
           id: string
           item_id: string
@@ -248,6 +250,8 @@ export type Database = {
           alt_text?: string | null
           created_at?: string
           duration_ms?: number | null
+          focal_x?: number
+          focal_y?: number
           height?: number | null
           id?: string
           item_id: string
@@ -262,6 +266,8 @@ export type Database = {
           alt_text?: string | null
           created_at?: string
           duration_ms?: number | null
+          focal_x?: number
+          focal_y?: number
           height?: number | null
           id?: string
           item_id?: string

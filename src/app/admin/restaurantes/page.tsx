@@ -27,8 +27,12 @@ export default async function Page() {
   const restaurants = await listRestaurantsForAdmin()
 
   return (
-    <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-8 sm:px-6">
-      <PageHeader title="Restaurantes" />
+    <main className="tavvi-page">
+      <PageHeader
+        eyebrow="Plataforma"
+        title="Restaurantes"
+        description="Acompanhe os estabelecimentos, endereços públicos e situação de publicação."
+      />
 
       {restaurants.length === 0 ? (
         <Empty>
@@ -45,42 +49,57 @@ export default async function Page() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Endereço</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Situação</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <>
+          <div className="tavvi-surface hidden overflow-hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/35">
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Endereço</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Situação</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {restaurants.map((restaurant) => (
+                  <TableRow key={restaurant.id} className="h-16">
+                    <TableCell>
+                      <Link
+                        href={`/restaurantes/${restaurant.id}`}
+                        className="font-semibold underline-offset-4 hover:text-primary hover:underline focus-visible:rounded focus-visible:ring-2 focus-visible:ring-ring/60"
+                      >
+                        {restaurant.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">/{restaurant.slug}</TableCell>
+                    <TableCell className="text-muted-foreground">{restaurant.segment ?? 'Não informado'}</TableCell>
+                    <TableCell><StatusBadge status={restaurant.status} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="grid gap-3 md:hidden">
             {restaurants.map((restaurant) => (
-              // h-14 são os 56px de altura de linha da direção visual.
-              <TableRow key={restaurant.id} className="h-14">
-                <TableCell>
-                  <Link
-                    href={`/restaurantes/${restaurant.id}`}
-                    className="font-medium underline-offset-4 hover:underline"
-                  >
-                    {restaurant.name}
-                  </Link>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  /{restaurant.slug}
-                </TableCell>
-                {/* O segmento é opcional no assistente. Um travessão diz
-                    "não informado" sem gritar que falta alguma coisa. */}
-                <TableCell className="text-muted-foreground">
-                  {restaurant.segment ?? '—'}
-                </TableCell>
-                <TableCell>
+              <Link
+                key={restaurant.id}
+                href={`/restaurantes/${restaurant.id}`}
+                className="tavvi-surface block p-4 outline-none transition-transform active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-ring/60"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{restaurant.name}</p>
+                    <p className="mt-1 truncate text-sm text-muted-foreground">/{restaurant.slug}</p>
+                  </div>
                   <StatusBadge status={restaurant.status} />
-                </TableCell>
-              </TableRow>
+                </div>
+                <p className="mt-4 text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                  {restaurant.segment ?? 'Tipo não informado'}
+                </p>
+              </Link>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+        </>
       )}
     </main>
   )

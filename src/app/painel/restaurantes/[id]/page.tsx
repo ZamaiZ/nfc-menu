@@ -15,9 +15,9 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { uuidSchema } from '@/domain/common'
-import { myRole, requireUser } from '@/server/dal/auth'
+import { requireUser } from '@/server/dal/auth'
 import { getMenuForOwner } from '@/server/dal/menu'
-import { getRestaurantForMember } from '@/server/dal/restaurants'
+import { getRestaurantWorkspace } from '@/server/dal/restaurant-workspace'
 import { env } from '@/server/env'
 
 export default async function Page({
@@ -31,31 +31,37 @@ export default async function Page({
   const parsed = uuidSchema.safeParse(id)
   if (!parsed.success) notFound()
 
-  const restaurant = await getRestaurantForMember(parsed.data)
+  const workspace = await getRestaurantWorkspace(parsed.data)
   // Restaurante de outra pessoa cai em 404, não em "sem permissão": não
   // confirmamos nem que o id existe.
-  if (!restaurant) notFound()
+  if (!workspace) notFound()
+
+  const { restaurant, canEdit } = workspace
 
   // O papel decide o que APARECE. Quem chamar a action na mão continua barrado
   // pela DAL e pela RLS — são três camadas dizendo a mesma coisa.
-  const role = await myRole(restaurant.id)
-  const canEdit = role === 'admin'
-
   const categories = await getMenuForOwner(restaurant.id)
   const publicUrl = `http://${env.NEXT_PUBLIC_ROOT_DOMAIN}/${restaurant.slug}`
 
+  // Quantos itens visíveis estão sem mídia. É o que a faixa de publicação
+  // mostra e o que trava o botão — a regra de verdade é o `setPublished`,
+  // que recusa de novo.
+  const semMidia = categories
+    .flatMap((category) => category.items)
+    .filter((item) => item.semMidia).length
+
   return (
-    <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-8 sm:px-6">
+    <main className="tavvi-page">
       <PageHeader
+        eyebrow="Cardápio"
         title={restaurant.name}
-        support={`${categories.length} ${
+        description={`${categories.length} ${
           categories.length === 1 ? 'categoria' : 'categorias'
         }`}
-      >
-        {canEdit && categories.length > 0 ? (
+        actions={canEdit && categories.length > 0 ? (
           <NewCategoryButton restaurantId={restaurant.id} />
         ) : null}
-      </PageHeader>
+      />
 
       {/* O atalho para o cardápio público vive aqui agora, ao lado da situação
           — que é onde ele faz sentido — e não solto no cabeçalho. */}
@@ -64,10 +70,11 @@ export default async function Page({
         status={restaurant.status}
         publicUrl={publicUrl}
         canEdit={canEdit}
+        semMidia={semMidia}
       />
 
       {categories.length === 0 ? (
-        <Empty>
+        <Empty className="tavvi-surface min-h-[360px]">
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <RiRestaurantLine />

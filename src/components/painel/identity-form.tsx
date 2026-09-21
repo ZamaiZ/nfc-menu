@@ -17,8 +17,9 @@ import {
   type ThemeChoice,
   type ThemePresetId,
 } from '@/domain/theme'
-import { contrastRatio } from '@/lib/color'
+import { fitContrast } from '@/lib/color'
 import { isBaseInRange, PRESETS } from '@/lib/theme/presets'
+import { PISOS } from '@/lib/theme/resolve'
 import { updateIdentityAction } from '@/server/actions/restaurants'
 import { cn } from 'cn'
 
@@ -48,6 +49,10 @@ export function IdentityForm({
   )
   const [segmento, setSegmento] = useState<string | null>(segment)
   const [tocouTema, setTocouTema] = useState(false)
+  // O aceite da derivação é por MUDANÇA, não por sessão: quem abre a tela e
+  // não mexe na cor não é interrogado de novo sobre uma escolha que já fez.
+  const [tocouAccent, setTocouAccent] = useState(false)
+  const [accentAceito, setAccentAceito] = useState(false)
   const [pending, startTransition] = useTransition()
 
   const preset = PRESETS[escolha.preset]
@@ -61,11 +66,27 @@ export function IdentityForm({
     () => isBaseInRange(escolha.preset, baseAtual),
     [escolha.preset, baseAtual],
   )
-  const razaoAccent = useMemo(
-    () => contrastRatio(baseAtual, accentAtual),
-    [baseAtual, accentAtual],
+  // A derivação por face, a mesma que `resolveTheme` faz para desenhar o
+  // cardápio e que `updateIdentity` confere antes de gravar. `null` numa das
+  // faces quer dizer que nem o extremo de luminosidade atinge o piso — e aí
+  // a cor é recusada, não adaptada.
+  const derivado = useMemo(
+    () => ({
+      claro: fitContrast(accentAtual, baseAtual, PISOS.accent),
+      escuro: fitContrast(accentAtual, preset.dark.base, PISOS.accent),
+    }),
+    [accentAtual, baseAtual, preset],
   )
-  const accentValido = razaoAccent >= 3
+
+  const accentValido = derivado.claro !== null && derivado.escuro !== null
+
+  // Só pede aceite quando a derivação de fato MUDOU a cor. Cor que já serve
+  // nas duas faces passa direto: pedir confirmação do que não mudou é ruído
+  // que ensina a clicar sem ler.
+  const precisaAceite =
+    tocouAccent &&
+    accentValido &&
+    (derivado.claro !== accentAtual || derivado.escuro !== accentAtual)
 
   function trocarSegmento(valor: string) {
     const novo = valor === '' ? null : valor
@@ -85,6 +106,10 @@ export function IdentityForm({
     // faixa do Grão quase nunca está dentro da faixa do Brasa, e carregar a
     // cor antiga produziria um estado recusado já no primeiro render.
     setEscolha((atual) => ({ ...atual, preset: id, base: null, accent: null }))
+    // E o aceite zera junto: a cor voltou a ser a do preset, que é calibrada
+    // e não precisa de aceite nenhum.
+    setTocouAccent(false)
+    setAccentAceito(false)
   }
 
   function salvar() {
@@ -104,8 +129,8 @@ export function IdentityForm({
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="space-y-8">
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] xl:gap-8">
+      <div className="tavvi-surface space-y-8 rounded-2xl p-5 sm:p-7 lg:p-8">
         {/* Logo e capa gravam SOZINHAS, na hora do envio — não esperam o
             "Salvar identidade". Envio de arquivo já é uma confirmação por si,
             e amarrar o arquivo a um botão de salvar criaria um estado onde o
@@ -210,23 +235,75 @@ export function IdentityForm({
               id="accent"
               type="color"
               value={accentAtual}
-              onChange={(event) =>
+              onChange={(event) => {
+                setTocouAccent(true)
+                setAccentAceito(false)
                 setEscolha((a) => ({ ...a, accent: event.target.value }))
-              }
+              }}
               className="h-11 w-full cursor-pointer rounded-md border border-input bg-transparent p-1"
             />
             <FieldDescription>
-              Contraste {razaoAccent.toFixed(1)}:1.{' '}
               {accentValido ? (
-                'Legível sobre o fundo.'
+                'O matiz é mantido nas duas versões do cardápio; só a luminosidade se ajusta quando precisa.'
               ) : (
                 <span className="text-destructive">
-                  Abaixo de 3:1. Escolha um tom mais escuro ou mais claro.
+                  Não fica legível na versão{' '}
+                  {derivado.claro === null && derivado.escuro === null
+                    ? 'clara nem na escura'
+                    : derivado.claro === null
+                      ? 'clara'
+                      : 'escura'}{' '}
+                  do cardápio. Escolha um tom mais vivo ou menos acinzentado.
                 </span>
               )}
             </FieldDescription>
           </Field>
         </div>
+
+        {/* A derivação não é silenciosa. Sem isto, a cor da marca mudaria
+            pelas costas do dono e ele só descobriria se olhasse a
+            pré-visualização escura. */}
+        {precisaAceite ? (
+          <div className="rounded-lg border border-border bg-surface-1 p-4">
+            <p className="text-small font-medium">
+              Esta cor precisa de ajuste para ficar legível
+            </p>
+            <p className="mt-1 text-small text-muted-foreground">
+              O matiz é mantido; só a luminosidade muda, e só na versão em que
+              a cor original não seria lida.
+            </p>
+
+            <div className="mt-3 flex flex-wrap gap-4">
+              {[
+                { rotulo: 'Você escolheu', cor: accentAtual },
+                { rotulo: 'No claro', cor: derivado.claro ?? accentAtual },
+                { rotulo: 'No escuro', cor: derivado.escuro ?? accentAtual },
+              ].map((amostra) => (
+                <div key={amostra.rotulo}>
+                  <span
+                    className="block size-10 rounded-md border border-border"
+                    style={{ background: amostra.cor }}
+                  />
+                  <p className="mt-1 text-micro text-muted-foreground">
+                    {amostra.rotulo}
+                  </p>
+                  <p className="text-micro font-medium">{amostra.cor}</p>
+                </div>
+              ))}
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => setAccentAceito(true)}
+            >
+              <RiCheckLine className="size-4" />
+              Entendi, usar assim
+            </Button>
+          </div>
+        ) : null}
 
         <div>
           <p className="text-small font-medium">Densidade</p>
@@ -249,14 +326,26 @@ export function IdentityForm({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button onClick={salvar} disabled={pending || !baseValida || !accentValido}>
+          <Button
+            onClick={salvar}
+            disabled={
+              pending ||
+              !baseValida ||
+              !accentValido ||
+              (precisaAceite && !accentAceito)
+            }
+          >
             {pending ? <Spinner className="size-4" /> : <RiCheckLine className="size-4" />}
-            Salvar identidade
+            {pending ? 'Salvando…' : 'Salvar identidade'}
           </Button>
           <Button
             type="button"
             variant="ghost"
-            onClick={() => setEscolha((a) => ({ ...a, base: null, accent: null }))}
+            onClick={() => {
+              setEscolha((a) => ({ ...a, base: null, accent: null }))
+              setTocouAccent(false)
+              setAccentAceito(false)
+            }}
           >
             <RiArrowGoBackLine className="size-4" />
             Restaurar as cores do tema
@@ -264,11 +353,13 @@ export function IdentityForm({
         </div>
       </div>
 
-      <div className="lg:sticky lg:top-24 lg:self-start">
-        <p className="mb-3 text-small text-muted-foreground">
-          É assim que o cliente vai ver.
-        </p>
-        <ThemePreview theme={escolha} name={name} />
+      <div className="lg:sticky lg:top-8 lg:self-start">
+        <div className="tavvi-surface rounded-2xl p-4 sm:p-5">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Pré-visualização do cardápio
+          </p>
+          <ThemePreview theme={escolha} name={name} />
+        </div>
       </div>
     </div>
   )

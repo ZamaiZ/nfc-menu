@@ -120,7 +120,12 @@ export async function myRole(restaurantId: string): Promise<MemberRole | null> {
   await requireUser()
   const supabase = await createUserClient(await currentTerritory())
   const { data, error } = await supabase.rpc('my_role', { rid: restaurantId })
-  if (error || !data) return null
+  if (error) {
+    throw new Error('Não foi possível verificar seu acesso ao restaurante.', {
+      cause: error,
+    })
+  }
+  if (!data) return null
 
   const parsed = memberRoleSchema.safeParse(data)
   return parsed.success ? parsed.data : null

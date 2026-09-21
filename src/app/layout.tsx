@@ -5,6 +5,8 @@ import { cn } from 'cn'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { ThemeScript } from '@/components/theme/theme-script'
 import { Toaster } from '@/components/ui/toast'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { MotionProvider } from '@/components/providers/motion-provider'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 
@@ -12,9 +14,9 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 // serifa e fecha as contraformas, que é o que dá presença a um título grande
 // sem precisar recorrer a peso 700.
 //
-// Ela é a face de display do PAINEL. O console fica só com a Inter, de
-// propósito: densidade e sobriedade são o caráter dele, e uma serifada quente
-// numa tela de operação seria enfeite no lugar errado.
+// Ela permanece apenas na pequena página pública institucional. Admin,
+// painel, autenticação e onboarding usam Inter; o cardápio público aplica as
+// fontes da identidade escolhida pelo restaurante.
 const fraunces = Fraunces({
   subsets: ['latin'],
   variable: '--font-display',
@@ -23,8 +25,8 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Cardápio digital',
-    template: '%s · Cardápio digital',
+    default: 'Tavvi',
+    template: '%s · Tavvi',
   },
   description: 'Cardápios de restaurante acessíveis por NFC e QR code.',
 }
@@ -48,8 +50,12 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>
-          {children}
-          <Toaster />
+          <MotionProvider>
+            <TooltipProvider>
+              {children}
+              <Toaster />
+            </TooltipProvider>
+          </MotionProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -25,7 +25,12 @@ export async function signInAction(
   // safeNextPath de novo: o campo oculto do formulário é controlado pelo
   // navegador, então o valor não pode ser confiado só porque a página o
   // entregou limpo.
-  redirect(safeNextPath(formData.get('next'), '/'))
+  //
+  // O padrão deixou de ser `/` na Fase 4. Cair na rota ambígua logo depois de
+  // entrar era exatamente o momento em que a página do território público
+  // aparecia dentro do painel. `/restaurantes` existe nos DOIS territórios
+  // privados, então o padrão vale para os dois sem ramificação.
+  redirect(safeNextPath(formData.get('next'), '/restaurantes'))
 }
 
 export async function signUpAction(

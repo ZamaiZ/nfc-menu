@@ -1,16 +1,20 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import * as dal from '@/server/dal/menu'
+import { revalidateRestaurant } from '@/server/revalidate'
 import { runAction, type ActionResult } from './result'
+
+// Todas estas chamavam `revalidatePath('/')` — o caminho de ORIGEM, que o
+// proxy reescreve. A doc empacotada do Next manda passar o DESTINO, e é o
+// que `revalidateRestaurant` faz. Ver `@/server/revalidate`.
 
 export async function createCategoryAction(
   input: unknown,
 ): Promise<ActionResult<{ id: string }>> {
   return runAction(async () => {
-    const id = await dal.createCategory(input)
-    revalidatePath('/')
-    return { id }
+    const { createdId, ...alvo } = await dal.createCategory(input)
+    revalidateRestaurant(alvo)
+    return { id: createdId }
   })
 }
 
@@ -18,8 +22,7 @@ export async function updateCategoryAction(
   input: unknown,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.updateCategory(input)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.updateCategory(input))
   })
 }
 
@@ -27,8 +30,7 @@ export async function deleteCategoryAction(
   categoryId: unknown,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.deleteCategory(categoryId)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.deleteCategory(categoryId))
   })
 }
 
@@ -36,8 +38,7 @@ export async function reorderCategoriesAction(
   input: unknown,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.reorderCategories(input)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.reorderCategories(input))
   })
 }
 
@@ -45,23 +46,21 @@ export async function createItemAction(
   input: unknown,
 ): Promise<ActionResult<{ id: string }>> {
   return runAction(async () => {
-    const id = await dal.createItem(input)
-    revalidatePath('/')
-    return { id }
+    const { createdId, ...alvo } = await dal.createItem(input)
+    revalidateRestaurant(alvo)
+    return { id: createdId }
   })
 }
 
 export async function updateItemAction(input: unknown): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.updateItem(input)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.updateItem(input))
   })
 }
 
 export async function deleteItemAction(itemId: unknown): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.deleteItem(itemId)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.deleteItem(itemId))
   })
 }
 
@@ -69,8 +68,7 @@ export async function reorderItemsAction(
   input: unknown,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.reorderItems(input)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.reorderItems(input))
   })
 }
 
@@ -78,8 +76,7 @@ export async function setItemAvailabilityAction(
   input: unknown,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.setItemAvailability(input)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.setItemAvailability(input))
   })
 }
 
@@ -87,9 +84,9 @@ export async function createVariantAction(
   input: unknown,
 ): Promise<ActionResult<{ id: string }>> {
   return runAction(async () => {
-    const id = await dal.createVariant(input)
-    revalidatePath('/')
-    return { id }
+    const { createdId, ...alvo } = await dal.createVariant(input)
+    revalidateRestaurant(alvo)
+    return { id: createdId }
   })
 }
 
@@ -97,8 +94,7 @@ export async function updateVariantAction(
   input: unknown,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.updateVariant(input)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.updateVariant(input))
   })
 }
 
@@ -106,7 +102,6 @@ export async function deleteVariantAction(
   variantId: unknown,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await dal.deleteVariant(variantId)
-    revalidatePath('/')
+    revalidateRestaurant(await dal.deleteVariant(variantId))
   })
 }
