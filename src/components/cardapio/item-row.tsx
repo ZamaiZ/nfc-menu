@@ -123,7 +123,7 @@ export function ItemRow({
   }
 
   return (
-    <div className="grid min-h-[76px] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 border-b border-border/60 px-4 py-3 last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:px-5">
+    <div className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 border-b border-border/60 px-4 py-2.5 last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
       {/* Miniatura com img simples, não next/image: o CMS não é a superfície
           crítica de desempenho. (O motivo original — remotePatterns não
           configurado — deixou de valer na Fase 4, mas a escolha continua
@@ -136,22 +136,22 @@ export function ItemRow({
         <img
           src={thumbUrl}
           alt=""
-          width={48}
-          height={48}
+          width={40}
+          height={40}
           loading="lazy"
-          className="size-12 shrink-0 rounded-xl object-cover"
+          className="size-10 shrink-0 rounded-lg object-cover"
           style={{
             objectPosition: `${thumb.focalX * 100}% ${thumb.focalY * 100}%`,
           }}
         />
       ) : (
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-          <RiImageLine className="size-5" aria-hidden="true" />
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+          <RiImageLine className="size-4" aria-hidden="true" />
         </span>
       )}
 
       <div className="min-w-0">
-        <p className="truncate font-medium">
+        <p className="truncate text-sm font-medium">
           {item.name}
           {!item.isVisible ? (
             <span className="ml-2 text-sm font-normal text-muted-foreground">
@@ -168,7 +168,7 @@ export function ItemRow({
             </span>
           ) : null}
         </p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {formatPriceBRL(item.basePriceCents)}
           {item.variants.length > 0
             ? ` · ${item.variants.length} ${item.variants.length === 1 ? 'variação' : 'variações'}`
@@ -182,7 +182,7 @@ export function ItemRow({
           mostra a situação como TEXTO, sem interruptor. */}
       <div className="col-span-2 flex min-w-0 items-center justify-end gap-2 sm:col-span-1">
         {canEdit ? (
-          <label className="flex items-center gap-2 rounded-lg bg-muted/30 px-3 py-1.5 text-sm">
+          <label className="flex items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-muted/30">
             <span className="text-muted-foreground">
               {available ? 'Disponível' : 'Esgotado'}
             </span>

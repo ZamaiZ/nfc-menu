@@ -1,9 +1,8 @@
 import { Skeleton } from '@/components/ui/skeleton'
 
 // A tela de identidade é a mais pesada do painel: ela carrega as nove fontes
-// de tema e as duas pré-visualizações. O esqueleto espelha as duas colunas —
-// formulário à esquerda, os dois celulares de pré-visualização à direita —
-// para a página não reorganizar quando chegar.
+// de tema. A pré-visualização agora flutua fora do fluxo, então o esqueleto
+// mantém apenas a coluna de edição estável.
 export default function Loading() {
   return (
     <main className="tavvi-page">
@@ -12,8 +11,7 @@ export default function Loading() {
         <Skeleton className="h-4 w-80" />
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_480px]">
-        <div className="tavvi-surface space-y-8 p-5 sm:p-7">
+      <div className="tavvi-surface max-w-[840px] space-y-6 p-5 sm:p-6">
           {/* Logo e capa. */}
           <div className="grid gap-6 sm:grid-cols-[auto_minmax(0,1fr)]">
             <div className="space-y-2">
@@ -53,17 +51,6 @@ export default function Loading() {
               </div>
             ))}
           </div>
-        </div>
-
-        {/* As duas faces, clara e escura. */}
-        <div className="flex gap-4 overflow-hidden lg:grid lg:grid-cols-2">
-          {[0, 1].map((face) => (
-            <div key={face} className="space-y-2">
-              <Skeleton className="mx-auto h-3 w-12" />
-              <Skeleton className="mx-auto h-[432px] w-[232px] rounded-[24px]" />
-            </div>
-          ))}
-        </div>
       </div>
     </main>
   )

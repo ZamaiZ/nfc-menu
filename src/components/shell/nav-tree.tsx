@@ -10,7 +10,7 @@ import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { isGroupActive, isHrefActive } from './navigation'
+import { getActiveHref, isGroupActive, isHrefActive } from './navigation'
 import { getNavIcon } from './navigation-icons'
 import type { NavGroup, NavItem, NavLeaf } from './navigation.types'
 
@@ -169,14 +169,14 @@ function SidebarLabel({
 
 function SheetTreeChild({
   child,
-  pathname,
+  activeHref,
   onNavigate,
 }: {
   child: NavLeaf
-  pathname: string
+  activeHref: string | undefined
   onNavigate?: () => void
 }) {
-  const isActive = !child.disabled && isHrefActive(pathname, child.href)
+  const isActive = !child.disabled && activeHref === child.href
   const Icon = getNavIcon(child.icon)
   const className = cn(
     'relative flex h-full w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs/relaxed',
@@ -235,22 +235,22 @@ function SheetTreeChild({
 
 function NavChildLink({
   child,
-  pathname,
+  activeHref,
   density,
   inset,
   onNavigate,
 }: {
   child: NavLeaf
-  pathname: string
+  activeHref: string | undefined
   density: NavTreeDensity
   inset: 'tree' | 'flyout'
   onNavigate?: () => void
 }) {
   if (density === 'sheet' && inset === 'tree') {
-    return <SheetTreeChild child={child} pathname={pathname} onNavigate={onNavigate} />
+    return <SheetTreeChild child={child} activeHref={activeHref} onNavigate={onNavigate} />
   }
 
-  const isActive = !child.disabled && isHrefActive(pathname, child.href)
+  const isActive = !child.disabled && activeHref === child.href
   const isFlyout = inset === 'flyout'
   const Icon = getNavIcon(child.icon)
   const className = cn(
@@ -464,6 +464,7 @@ function NavGroupBlock({
   onNavigate?: () => void
 }) {
   const groupActive = isGroupActive(pathname, item)
+  const activeHref = getActiveHref(pathname, item.children)
   const [open, setOpen] = useState(groupActive)
   const [flyoutOpen, setFlyoutOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -595,7 +596,7 @@ function NavGroupBlock({
             >
               <NavChildLink
                 child={child}
-                pathname={pathname}
+                activeHref={activeHref}
                 density={density}
                 inset="tree"
                 onNavigate={onNavigate}
@@ -800,7 +801,7 @@ function NavGroupBlock({
                       <li key={child.href}>
                         <NavChildLink
                           child={child}
-                          pathname={pathname}
+                          activeHref={activeHref}
                           density="sidebar"
                           inset="flyout"
                           onNavigate={() => {

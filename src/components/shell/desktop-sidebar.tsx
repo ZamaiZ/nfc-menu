@@ -102,28 +102,38 @@ export function DesktopSidebar({ config }: { config: TavviShellConfig }) {
 
       <div
         role="img"
-        aria-label={APP_NAME}
+        aria-label={config.contextLabel ? `${APP_NAME}, ${config.contextLabel}` : APP_NAME}
         className={cn(
-          'flex h-14 shrink-0 items-center overflow-hidden border-b border-sidebar-border',
+          'flex h-16 shrink-0 items-center overflow-hidden border-b border-sidebar-border',
           collapsed ? 'justify-center px-0' : 'px-3',
         )}
       >
         <span
           aria-hidden="true"
-          className="flex size-[32px] shrink-0 items-center justify-center rounded-lg bg-primary text-[0.65rem] font-bold tracking-[0.08em] text-primary-foreground shadow-sm"
+          className="flex size-[32px] shrink-0 items-center justify-center rounded-lg bg-primary text-[0.7rem] font-bold tracking-[-0.02em] text-primary-foreground shadow-sm"
         >
           {APP_MONOGRAM}
         </span>
         <m.span
           aria-hidden="true"
-          className="overflow-hidden whitespace-nowrap pl-3 font-heading text-xs font-semibold uppercase leading-none tracking-widest text-muted-foreground select-none"
+          className="flex min-w-0 flex-col overflow-hidden whitespace-nowrap pl-3 select-none"
           animate={{
             maxWidth: expanded ? 188 : 0,
             opacity: expanded ? 1 : 0,
           }}
           transition={labelTransition()}
         >
-          {APP_NAME}
+          <span className="font-heading text-[0.65rem] font-semibold uppercase leading-none tracking-[0.14em] text-muted-foreground">
+            {APP_NAME}
+          </span>
+          {config.contextLabel ? (
+            <span
+              className="mt-1.5 block max-w-[176px] truncate text-xs font-semibold leading-none text-foreground"
+              title={config.contextLabel}
+            >
+              {config.contextLabel}
+            </span>
+          ) : null}
         </m.span>
       </div>
 

@@ -85,8 +85,8 @@ export function CategoryDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form action={submit} className="space-y-6">
-          <FieldGroup>
+        <form action={submit} className="space-y-5">
+          <FieldGroup className="gap-4">
             <Field>
               <FieldLabel htmlFor="cat-name">Nome</FieldLabel>
               <Input

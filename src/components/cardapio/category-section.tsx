@@ -118,19 +118,19 @@ export function CategorySection({
     // O fio interno fica só ENTRE os itens — conteúdos de mesmo peso —, que é
     // a regra da Fase 5: fio de 1px em tudo achata, e nada parece estar acima
     // de nada.
-    <Card className="gap-0 overflow-hidden rounded-[20px] border-border/70 p-0 shadow-[var(--shadow-1)]">
-      <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border/70 bg-muted/20 px-4 py-4 sm:px-5">
+    <Card className="gap-0 overflow-hidden rounded-xl border-border/70 p-0 shadow-[var(--shadow-1)]">
+      <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-border/70 bg-muted/15 px-4 py-3">
         <div className="min-w-0">
-          <CardTitle className="text-lg font-semibold tracking-[-0.02em]">
+          <CardTitle className="text-base font-semibold tracking-[-0.015em]">
             {category.name}
             {/* Oculta é dito por escrito, não só pelo esmaecimento. */}
             {!category.isVisible ? (
-              <span className="ml-2 align-middle text-sm font-normal text-muted-foreground">
+              <span className="ml-2 align-middle text-xs font-normal text-muted-foreground">
                 Oculta
               </span>
             ) : null}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="mt-0.5 text-xs">
             {category.items.length}{' '}
             {category.items.length === 1 ? 'item' : 'itens'}
           </CardDescription>

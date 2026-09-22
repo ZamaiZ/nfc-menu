@@ -2,6 +2,16 @@
 
 import { useRef, useState } from 'react'
 import { MediaEditor, type MediaEditorHandle } from '@/components/cardapio/media-editor'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -22,13 +32,6 @@ import { Spinner } from '@/components/ui/spinner'
 import { toast } from '@/components/ui/toast'
 import { createItemAction } from '@/server/actions/menu'
 
-// A decisão C6 da Fase 2 dizia: sem mídia aqui, porque ela precisa do id do
-// item, que ainda não existe antes de salvar. Era verdade enquanto o arquivo
-// subia no instante em que era escolhido.
-//
-// Com o STAGING da Fase 5 deixou de ser: os arquivos ficam em blob, o item
-// nasce, e só então eles sobem. O editor entra em modo `itemId={null}`, que é
-// exatamente este caso.
 export function ItemCreateDialog({
   restaurantId,
   categoryId,
@@ -42,16 +45,15 @@ export function ItemCreateDialog({
 }) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [discardAlertOpen, setDiscardAlertOpen] = useState(false)
   const editorRef = useRef<MediaEditorHandle>(null)
 
   async function submit(formData: FormData) {
     setPending(true)
     setError(null)
 
-    const reais = String(formData.get('price') ?? '').replace(',', '.')
-    // Math.round importa: 19.9 * 100 em ponto flutuante dá 1989.9999..., e
-    // truncar produziria R$ 19,89 silenciosamente.
-    const cents = Math.round(Number(reais) * 100)
+    const normalizedPrice = String(formData.get('price') ?? '').replace(',', '.')
+    const cents = Math.round(Number(normalizedPrice) * 100)
 
     if (!Number.isFinite(cents) || cents < 0) {
       setPending(false)
@@ -73,16 +75,12 @@ export function ItemCreateDialog({
       return
     }
 
-    // O item NASCEU. Só agora as pendentes têm para onde ir.
-    //
-    // Se a criação tivesse falhado, nada subiria — e é isso que faz o dono
-    // corrigir o preço sem perder os arquivos que já escolheu.
-    const midiasOk =
-      (await editorRef.current?.enviarPendentes(result.data.id)) ?? true
+    const mediaUploaded =
+      (await editorRef.current?.uploadPending(result.data.id)) ?? true
 
     setPending(false)
 
-    if (midiasOk) {
+    if (mediaUploaded) {
       toast.add({ title: 'Item criado', type: 'success' })
       onOpenChange(false)
       return
@@ -93,91 +91,116 @@ export function ItemCreateDialog({
     )
   }
 
-  // Fechar com pendente pede confirmação: aqui o risco é maior que na edição,
-  // porque nem o item existe ainda.
-  function aoTentarFechar(aberto: boolean) {
-    if (aberto) {
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
       onOpenChange(true)
       return
     }
 
-    const quantas = editorRef.current?.quantasPendentes() ?? 0
-    if (quantas > 0) {
-      const confirmado = window.confirm(
-        quantas === 1
-          ? 'Você tem 1 arquivo que ainda não foi enviado. Fechar agora descarta ele.'
-          : `Você tem ${quantas} arquivos que ainda não foram enviados. Fechar agora descarta todos.`,
-      )
-      if (!confirmado) return
+    const pendingCount = editorRef.current?.getPendingCount() ?? 0
+    if (pendingCount > 0) {
+      setDiscardAlertOpen(true)
+      return
     }
 
     onOpenChange(false)
   }
 
+  function discardPendingMedia() {
+    setDiscardAlertOpen(false)
+    onOpenChange(false)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={aoTentarFechar}>
-      <DialogContent className="max-h-[85dvh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Novo item</DialogTitle>
-          <DialogDescription>
-            Já dá para escolher as fotos e os vídeos aqui. Eles sobem quando
-            você criar o item.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="flex h-[min(720px,calc(100dvh-1.5rem))] max-h-[calc(100dvh-1.5rem)] w-[min(900px,calc(100vw-1.5rem))] max-w-[900px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[900px] max-sm:h-[calc(100dvh-1rem)] max-sm:max-h-[calc(100dvh-1rem)] max-sm:max-w-[calc(100%-1rem)]">
+          <DialogHeader className="shrink-0 border-b border-border px-5 py-4 pr-14 sm:px-6">
+            <DialogTitle>Novo item</DialogTitle>
+            <DialogDescription>
+              Escolha as fotos e os vídeos agora; o envio começa ao criar o item.
+            </DialogDescription>
+          </DialogHeader>
 
-        <form action={submit} className="space-y-6">
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="item-name">Nome</FieldLabel>
-              <Input
-                id="item-name"
-                name="name"
-                placeholder="Pão de alho"
-                autoFocus
-                required
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="item-price">Preço</FieldLabel>
-              <Input
-                id="item-price"
-                name="price"
-                inputMode="decimal"
-                placeholder="18,90"
-                required
-              />
-              <FieldDescription>Em reais, como 18,90.</FieldDescription>
-            </Field>
-          </FieldGroup>
+          <form action={submit} className="flex min-h-0 flex-1 flex-col">
+            <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+              <section className="border-b border-border p-5 sm:p-6 lg:border-r lg:border-b-0">
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold">Dados básicos</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    A descrição e as variações podem ser completadas depois.
+                  </p>
+                </div>
+                <FieldGroup className="gap-4">
+                  <Field>
+                    <FieldLabel htmlFor="item-name">Nome</FieldLabel>
+                    <Input
+                      id="item-name"
+                      name="name"
+                      placeholder="Pão de alho"
+                      autoFocus
+                      required
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="item-price">Preço</FieldLabel>
+                    <Input
+                      id="item-price"
+                      name="price"
+                      inputMode="decimal"
+                      placeholder="18,90"
+                      required
+                    />
+                    <FieldDescription className="text-xs">Em reais, como 18,90.</FieldDescription>
+                  </Field>
+                </FieldGroup>
+              </section>
 
-          <div>
-            <h3 className="mb-3 text-base font-semibold">Fotos e vídeos</h3>
-            {/* `itemId={null}`: o editor só ACUMULA. Quem envia é o `submit`,
-                depois que `createItemAction` devolve o id. */}
-            <MediaEditor ref={editorRef} itemId={null} media={[]} />
-          </div>
+              <section className="bg-surface-1/45 p-5 sm:p-6">
+                <div className="mb-3">
+                  <h3 className="text-sm font-semibold">Fotos e vídeos</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Arraste, cole ou selecione arquivos e defina a ordem.
+                  </p>
+                </div>
+                <MediaEditor ref={editorRef} itemId={null} media={[]} />
+              </section>
+            </div>
 
-          {error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
+            <DialogFooter className="shrink-0 border-t border-border bg-popover px-5 py-3 sm:items-center sm:justify-between sm:px-6">
+              <div className="min-h-5 flex-1">
+                {error ? <p role="alert" className="text-xs text-destructive">{error}</p> : null}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={pending}>
+                  {pending ? <Spinner className="size-4" /> : null}
+                  Criar item
+                </Button>
+              </div>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => aoTentarFechar(false)}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? <Spinner className="size-4" /> : null}
-              Criar item
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <AlertDialog open={discardAlertOpen} onOpenChange={setDiscardAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Descartar mídia pendente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Os arquivos selecionados serão descartados e o item não será criado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar editando</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={discardPendingMedia}>
+              Descartar e fechar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

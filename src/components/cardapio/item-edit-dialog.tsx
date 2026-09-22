@@ -1,6 +1,16 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -42,6 +52,7 @@ export function ItemEditDialog({
   const [available, setAvailable] = useState(item.isAvailable)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [discardAlertOpen, setDiscardAlertOpen] = useState(false)
   const editorRef = useRef<MediaEditorHandle>(null)
 
   async function submit(formData: FormData) {
@@ -74,172 +85,187 @@ export function ItemEditDialog({
       return
     }
 
-    // A confirmação das mídias é ESTE botão. Não entra botão novo: escolher
-    // o arquivo e salvar o item são a mesma intenção, e separá-los criaria
-    // dois passos para uma decisão só.
-    const midiasOk = (await editorRef.current?.enviarPendentes(item.id)) ?? true
-
+    const mediaUploaded =
+      (await editorRef.current?.uploadPending(item.id)) ?? true
     setPending(false)
 
-    if (midiasOk) {
+    if (mediaUploaded) {
       toast.add({ title: 'Item salvo', type: 'success' })
       onOpenChange(false)
       return
     }
 
-    // Fica ABERTO quando alguma mídia falhou: o item foi salvo, mas fechar
-    // aqui esconderia o erro e o dono só descobriria no cardápio público.
     setError(
       'O item foi salvo, mas alguma mídia não subiu. Veja o motivo em cada uma.',
     )
   }
 
-  // Fechar com pendente pede confirmação. Sem isso o dono perde arquivo
-  // achando que salvou — e o staging, que existe justamente para não subir
-  // nada por engano, viraria uma forma de perder trabalho.
-  function aoTentarFechar(aberto: boolean) {
-    if (aberto) {
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
       onOpenChange(true)
       return
     }
 
-    const quantas = editorRef.current?.quantasPendentes() ?? 0
-    if (quantas > 0) {
-      const confirmado = window.confirm(
-        quantas === 1
-          ? 'Você tem 1 arquivo que ainda não foi enviado. Fechar agora descarta ele.'
-          : `Você tem ${quantas} arquivos que ainda não foram enviados. Fechar agora descarta todos.`,
-      )
-      if (!confirmado) return
+    const pendingCount = editorRef.current?.getPendingCount() ?? 0
+    if (pendingCount > 0) {
+      setDiscardAlertOpen(true)
+      return
     }
 
     onOpenChange(false)
   }
 
+  function discardPendingMedia() {
+    setDiscardAlertOpen(false)
+    onOpenChange(false)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={aoTentarFechar}>
-      {/* Rola por dentro, para os botões não sumirem no fim do rolamento —
-          especialmente no celular. */}
-      <DialogContent className="max-h-[85dvh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Editar item</DialogTitle>
-          <DialogDescription>{item.name}</DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="flex h-[min(860px,calc(100dvh-1.5rem))] max-h-[calc(100dvh-1.5rem)] w-[min(960px,calc(100vw-1.5rem))] max-w-[960px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[960px] max-sm:h-[calc(100dvh-1rem)] max-sm:max-h-[calc(100dvh-1rem)] max-sm:max-w-[calc(100%-1rem)]">
+          <DialogHeader className="shrink-0 border-b border-border px-5 py-4 pr-14 sm:px-6">
+            <DialogTitle>Editar item</DialogTitle>
+            <DialogDescription>{item.name}</DialogDescription>
+          </DialogHeader>
 
-        <form action={submit} className="space-y-8">
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="edit-category">Categoria</FieldLabel>
-              <NativeSelect
-                id="edit-category"
-                name="categoryId"
-                defaultValue={item.categoryId}
-              >
-                {categories.map((category) => (
-                  <NativeSelectOption key={category.id} value={category.id}>
-                    {category.name}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-              <FieldDescription>
-                Trocar a categoria move o item no cardápio.
-              </FieldDescription>
-            </Field>
+          <form action={submit} className="flex min-h-0 flex-1 flex-col">
+            <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+              <section className="border-b border-border p-5 sm:p-6 lg:border-r lg:border-b-0">
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold">Dados do item</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Nome, preço, descrição e estado no cardápio.
+                  </p>
+                </div>
 
-            <Field>
-              <FieldLabel htmlFor="edit-name">Nome</FieldLabel>
-              <Input
-                id="edit-name"
-                name="name"
-                defaultValue={item.name}
-                required
-              />
-            </Field>
+                <FieldGroup className="gap-4">
+                  <Field>
+                    <FieldLabel htmlFor="edit-name">Nome</FieldLabel>
+                    <Input id="edit-name" name="name" defaultValue={item.name} required />
+                  </Field>
 
-            <Field>
-              <FieldLabel htmlFor="edit-description">Descrição</FieldLabel>
-              <Textarea
-                id="edit-description"
-                name="description"
-                rows={3}
-                defaultValue={item.description ?? ''}
-              />
-              <FieldDescription>
-                Texto simples. Não são aceitos os caracteres menor e maior.
-              </FieldDescription>
-            </Field>
+                  <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem] lg:grid-cols-1 xl:grid-cols-[minmax(0,1fr)_8rem]">
+                    <Field>
+                      <FieldLabel htmlFor="edit-category">Categoria</FieldLabel>
+                      <NativeSelect
+                        id="edit-category"
+                        name="categoryId"
+                        defaultValue={item.categoryId}
+                        className="w-full"
+                      >
+                        {categories.map((category) => (
+                          <NativeSelectOption key={category.id} value={category.id}>
+                            {category.name}
+                          </NativeSelectOption>
+                        ))}
+                      </NativeSelect>
+                    </Field>
 
-            <Field>
-              <FieldLabel htmlFor="edit-price">Preço</FieldLabel>
-              <Input
-                id="edit-price"
-                name="price"
-                inputMode="decimal"
-                defaultValue={(item.basePriceCents / 100)
-                  .toFixed(2)
-                  .replace('.', ',')}
-                required
-              />
-            </Field>
+                    <Field>
+                      <FieldLabel htmlFor="edit-price">Preço</FieldLabel>
+                      <Input
+                        id="edit-price"
+                        name="price"
+                        inputMode="decimal"
+                        defaultValue={(item.basePriceCents / 100).toFixed(2).replace('.', ',')}
+                        required
+                      />
+                    </Field>
+                  </div>
 
-            <Field>
-              <div className="flex items-center justify-between gap-4">
-                <FieldLabel htmlFor="edit-visible">
-                  Visível no cardápio
-                </FieldLabel>
-                <Switch
-                  id="edit-visible"
-                  checked={visible}
-                  onCheckedChange={(next) => setVisible(next)}
-                />
+                  <Field>
+                    <FieldLabel htmlFor="edit-description">Descrição</FieldLabel>
+                    <Textarea
+                      id="edit-description"
+                      name="description"
+                      rows={3}
+                      defaultValue={item.description ?? ''}
+                      className="min-h-20 py-2"
+                    />
+                    <FieldDescription className="text-xs">
+                      Texto simples; não aceita os caracteres menor e maior.
+                    </FieldDescription>
+                  </Field>
+
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                    <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border bg-surface-1 px-3 py-2">
+                      <FieldLabel htmlFor="edit-visible">Visível</FieldLabel>
+                      <Switch
+                        id="edit-visible"
+                        checked={visible}
+                        onCheckedChange={(next) => setVisible(next)}
+                      />
+                    </div>
+                    <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border bg-surface-1 px-3 py-2">
+                      <FieldLabel htmlFor="edit-available">Disponível</FieldLabel>
+                      <Switch
+                        id="edit-available"
+                        checked={available}
+                        onCheckedChange={(next) => setAvailable(next)}
+                      />
+                    </div>
+                  </div>
+                </FieldGroup>
+              </section>
+
+              <section className="space-y-6 bg-surface-1/45 p-5 sm:p-6">
+                <div>
+                  <div className="mb-3">
+                    <h3 className="text-sm font-semibold">Variações</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Tamanhos ou opções com preços diferentes.
+                    </p>
+                  </div>
+                  <VariantsEditor itemId={item.id} variants={item.variants} />
+                </div>
+
+                <div className="border-t border-border pt-5">
+                  <div className="mb-3">
+                    <h3 className="text-sm font-semibold">Fotos e vídeos</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      A primeira mídia abre o prato; selecione uma foto para ajustar o enquadramento.
+                    </p>
+                  </div>
+                  <MediaEditor ref={editorRef} itemId={item.id} media={item.media} />
+                </div>
+              </section>
+            </div>
+
+            <DialogFooter className="shrink-0 border-t border-border bg-popover px-5 py-3 sm:items-center sm:justify-between sm:px-6">
+              <div className="min-h-5 flex-1">
+                {error ? <p role="alert" className="text-xs text-destructive">{error}</p> : null}
               </div>
-            </Field>
-
-            <Field>
-              <div className="flex items-center justify-between gap-4">
-                <FieldLabel htmlFor="edit-available">Disponível</FieldLabel>
-                <Switch
-                  id="edit-available"
-                  checked={available}
-                  onCheckedChange={(next) => setAvailable(next)}
-                />
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
+                  Fechar
+                </Button>
+                <Button type="submit" disabled={pending}>
+                  {pending ? <Spinner className="size-4" /> : null}
+                  Salvar item
+                </Button>
               </div>
-            </Field>
-          </FieldGroup>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-          <div>
-            <h3 className="mb-4 text-base font-semibold">Variações</h3>
-            <VariantsEditor itemId={item.id} variants={item.variants} />
-          </div>
-
-          <div>
-            <h3 className="mb-4 text-base font-semibold">Mídia</h3>
-            <MediaEditor ref={editorRef} itemId={item.id} media={item.media} />
-          </div>
-
-          {error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              // Passa pela guarda, e não direto: senão o botão "Fechar" seria
-              // a única porta por onde o dono ainda perderia mídia pendente.
-              onClick={() => aoTentarFechar(false)}
-            >
-              Fechar
-            </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? <Spinner className="size-4" /> : null}
-              Salvar item
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <AlertDialog open={discardAlertOpen} onOpenChange={setDiscardAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Descartar mídia pendente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Os arquivos ainda não enviados serão descartados ao fechar este item.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar editando</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={discardPendingMedia}>
+              Descartar e fechar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

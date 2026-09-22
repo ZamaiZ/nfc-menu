@@ -1,7 +1,12 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
-import { RiArrowGoBackLine, RiCheckLine } from 'react-icons/ri'
+import {
+  RiArrowGoBackLine,
+  RiCheckLine,
+  RiCloseLine,
+  RiSmartphoneLine,
+} from 'react-icons/ri'
 import { BrandImages } from '@/components/painel/brand-images'
 import { ThemePreview } from '@/components/painel/theme-preview'
 import { Button } from '@/components/ui/button'
@@ -54,6 +59,7 @@ export function IdentityForm({
   const [tocouAccent, setTocouAccent] = useState(false)
   const [accentAceito, setAccentAceito] = useState(false)
   const [pending, startTransition] = useTransition()
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   const preset = PRESETS[escolha.preset]
   const baseAtual = escolha.base ?? preset.light.base
@@ -129,8 +135,8 @@ export function IdentityForm({
   }
 
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] xl:gap-8">
-      <div className="tavvi-surface space-y-8 rounded-2xl p-5 sm:p-7 lg:p-8">
+    <div className="relative">
+      <div className="tavvi-surface max-w-[840px] space-y-6 p-5 sm:p-6">
         {/* Logo e capa gravam SOZINHAS, na hora do envio — não esperam o
             "Salvar identidade". Envio de arquivo já é uma confirmação por si,
             e amarrar o arquivo a um botão de salvar criaria um estado onde o
@@ -353,13 +359,46 @@ export function IdentityForm({
         </div>
       </div>
 
-      <div className="lg:sticky lg:top-8 lg:self-start">
-        <div className="tavvi-surface rounded-2xl p-4 sm:p-5">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Pré-visualização do cardápio
-          </p>
-          <ThemePreview theme={escolha} name={name} />
-        </div>
+      <div className="fixed right-4 bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-30 flex flex-col items-end md:right-6 md:bottom-6">
+        {previewOpen ? (
+          <section
+            id="identity-preview-panel"
+            aria-label="Pré-visualização do cardápio"
+            className="w-[min(480px,calc(100vw-2rem))] max-h-[calc(100dvh-10rem)] overflow-y-auto rounded-2xl border border-border bg-popover/95 p-4 shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none md:max-h-[calc(100dvh-7rem)]"
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">Pré-visualização</p>
+                <p className="text-xs text-muted-foreground">
+                  Claro e escuro, sem reduzir a área de edição.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setPreviewOpen(false)}
+                aria-label="Recolher pré-visualização"
+              >
+                <RiCloseLine className="size-4" />
+              </Button>
+            </div>
+            <ThemePreview theme={escolha} name={name} />
+          </section>
+        ) : null}
+
+        <Button
+          type="button"
+          variant={previewOpen ? 'secondary' : 'default'}
+          size="lg"
+          aria-expanded={previewOpen}
+          aria-controls="identity-preview-panel"
+          onClick={() => setPreviewOpen((current) => !current)}
+          className="mt-3 rounded-full px-4 shadow-lg"
+        >
+          <RiSmartphoneLine className="size-4" />
+          {previewOpen ? 'Recolher prévia' : 'Ver prévia'}
+        </Button>
       </div>
     </div>
   )

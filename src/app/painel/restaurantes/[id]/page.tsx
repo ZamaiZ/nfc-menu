@@ -98,7 +98,7 @@ export default async function Page({
           ) : null}
         </Empty>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {categories.map((category, index) => (
             <CategorySection
               key={category.id}
@@ -109,7 +109,7 @@ export default async function Page({
               canEdit={canEdit}
             >
               {category.items.length === 0 ? (
-                <div className="px-4 py-8 text-center">
+                <div className="px-4 py-6 text-center">
                   <p className="mb-4 text-muted-foreground">
                     Nenhum item nesta categoria.
                   </p>
@@ -137,7 +137,7 @@ export default async function Page({
                     />
                   ))}
                   {canEdit ? (
-                    <div className="px-4 py-3">
+                    <div className="px-4 py-2.5">
                       <NewItemButton
                         restaurantId={restaurant.id}
                         categoryId={category.id}

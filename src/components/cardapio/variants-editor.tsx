@@ -56,17 +56,17 @@ export function VariantsEditor({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {variants.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           Sem variações. Use para tamanhos, como Pizza P, M e G.
         </p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-1.5">
           {variants.map((variant) => (
             <li
               key={variant.id}
-              className="flex items-center gap-3 rounded-md border border-border px-3 py-2"
+              className="flex min-h-10 items-center gap-2 rounded-lg border border-border bg-popover px-3 py-1.5 text-sm"
             >
               <span className="mr-auto">{variant.name}</span>
               <span className="text-muted-foreground">
@@ -75,7 +75,7 @@ export function VariantsEditor({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon"
+                size="icon-sm"
                 disabled={pending}
                 aria-label={`Remover variação ${variant.name}`}
                 onClick={() =>
@@ -94,13 +94,13 @@ export function VariantsEditor({
         </ul>
       )}
 
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_7rem_auto]">
         <Input
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Tamanho G"
           aria-label="Nome da variação"
-          className="min-w-40 flex-1"
+          className="min-w-0"
         />
         <Input
           value={price}
@@ -108,7 +108,7 @@ export function VariantsEditor({
           inputMode="decimal"
           placeholder="24,90"
           aria-label="Preço da variação"
-          className="w-28"
+          className="w-full"
         />
         <Button type="button" variant="outline" disabled={pending} onClick={add}>
           {pending ? (

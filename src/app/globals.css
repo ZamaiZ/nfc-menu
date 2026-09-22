@@ -78,18 +78,6 @@
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
 
-  /* Ritmo declarado, base 4px. Existe porque até a Fase 5 cada tela escolhia
-     o próprio espaçamento — py-8 aqui, p-4 ali, gap-3 acolá — e é essa
-     variação miúda que fazia o painel parecer montado por partes. */
-  --spacing-1: 0.25rem;
-  --spacing-2: 0.5rem;
-  --spacing-3: 0.75rem;
-  --spacing-4: 1rem;
-  --spacing-5: 1.5rem;
-  --spacing-6: 2rem;
-  --spacing-7: 3rem;
-  --spacing-8: 4rem;
-
   /* Uma curva só no produto. É a expo-out que `Reveal` usa desde a Fase 3A:
      arranca rápido e freia longo, o que faz o movimento parecer resposta do
      sistema e não enfeite. */
@@ -259,19 +247,19 @@
 .tavvi-page {
   width: min(100%, 1180px);
   margin-inline: auto;
-  padding: 2rem 2rem 4rem;
+  padding: 1.5rem 1.5rem 3rem;
 }
 
 .tavvi-surface {
   border: 1px solid color-mix(in oklch, var(--border), transparent 18%);
-  border-radius: 0.6rem;
+  border-radius: 0.875rem;
   background: var(--surface-2);
   box-shadow: var(--shadow-1);
 }
 
 @media (max-width: 767px) {
   .tavvi-page {
-    padding: 1.5rem 1rem calc(7rem + env(safe-area-inset-bottom));
+    padding: 1.25rem 1rem calc(7rem + env(safe-area-inset-bottom));
   }
 }
 

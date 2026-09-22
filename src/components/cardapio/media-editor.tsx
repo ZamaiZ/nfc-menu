@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, useTransition } from 'react'
 import { MediaDropzone } from '@/components/cardapio/media-dropzone'
 import { MediaFocal } from '@/components/cardapio/media-focal'
-import { formatarTamanho, MediaItem } from '@/components/cardapio/media-item'
+import { formatFileSize, MediaItem } from '@/components/cardapio/media-item'
 import { AttachmentGroup } from '@/components/ui/attachment'
 import { toast } from '@/components/ui/toast'
-import { MAX_MIDIAS_POR_ITEM, MEDIA_LIMITS } from '@/domain/media'
+import { MAX_MIDIAS_POR_ITEM as MAX_MEDIA_PER_ITEM, MEDIA_LIMITS } from '@/domain/media'
 import type { OwnerMenuItemDTO } from '@/domain/menu'
-import { comprimirImagem } from '@/lib/media/comprimir-imagem'
-import { comprimirVideo } from '@/lib/media/comprimir-video'
-import type { MidiaPendente } from '@/lib/media/tipos'
+import { comprimirImagem as compressImage } from '@/lib/media/comprimir-imagem'
+import { comprimirVideo as compressVideo } from '@/lib/media/comprimir-video'
+import type { MidiaPendente as PendingMedia } from '@/lib/media/tipos'
 import { publicMediaUrl } from '@/lib/media-url'
 import {
   captureVideoPoster,
@@ -26,16 +26,16 @@ import {
 
 const MAX_VIDEO_MS = 15_000
 
-const ACEITOS = [
+const ACCEPTED_TYPES = [
   ...MEDIA_LIMITS.image.mimes,
   ...MEDIA_LIMITS.video.mimes,
 ] as readonly string[]
 
 export type MediaEditorHandle = {
   /** Sobe tudo o que está pendente. `false` se alguma falhou. */
-  enviarPendentes: (itemId: string) => Promise<boolean>
+  uploadPending: (itemId: string) => Promise<boolean>
   /** Quantas pendentes existem agora. O diálogo usa para avisar ao fechar. */
-  quantasPendentes: () => number
+  getPendingCount: () => number
 }
 
 // O editor de mídia, reescrito na Fase 5 sobre STAGING.
@@ -52,155 +52,170 @@ export function MediaEditor({
   itemId,
   media,
   ref,
-  onPendentesChange,
+  onPendingChange,
 }: {
   itemId: string | null
   media: OwnerMenuItemDTO['media']
   ref?: React.Ref<MediaEditorHandle>
-  onPendentesChange?: (quantidade: number) => void
+  onPendingChange?: (count: number) => void
 }) {
-  const [pendentes, setPendentes] = useState<MidiaPendente[]>([])
-  const [erro, setErro] = useState<string | null>(null)
-  const [ocupado, startTransition] = useTransition()
-  const [enviando, setEnviando] = useState(false)
-
-  const gravadas = [...media].sort((a, b) => a.position - b.position)
-  const restantes = Math.max(
-    0,
-    MAX_MIDIAS_POR_ITEM - gravadas.length - pendentes.length,
+  const [pendingMedia, setPendingMedia] = useState<PendingMedia[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [transitionPending, startTransition] = useTransition()
+  const [uploading, setUploading] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(
+    media[0]?.id ?? null,
   )
+
+  const savedMedia = [...media].sort((a, b) => a.position - b.position)
+  const remainingSlots = Math.max(
+    0,
+    MAX_MEDIA_PER_ITEM - savedMedia.length - pendingMedia.length,
+  )
+  const selectedMedia =
+    savedMedia.find((entry) => entry.id === selectedId) ??
+    savedMedia[0] ??
+    null
 
   // `useRef` do array para a limpeza no desmonte enxergar o valor ATUAL. Um
   // efeito com `[]` de dependências fecharia sobre o array vazio inicial e
   // não revogaria nada — e um dono que troca dez fotos numa sessão seguraria
   // dez blobs na memória do celular.
-  const pendentesRef = useRef<MidiaPendente[]>([])
-  pendentesRef.current = pendentes
+  const pendingMediaRef = useRef<PendingMedia[]>([])
+  pendingMediaRef.current = pendingMedia
 
   useEffect(() => {
     return () => {
-      for (const p of pendentesRef.current) URL.revokeObjectURL(p.previewUrl)
+      for (const pendingItem of pendingMediaRef.current) {
+        URL.revokeObjectURL(pendingItem.previewUrl)
+      }
     }
   }, [])
 
   useEffect(() => {
-    onPendentesChange?.(pendentes.length)
-  }, [pendentes.length, onPendentesChange])
+    onPendingChange?.(pendingMedia.length)
+  }, [pendingMedia.length, onPendingChange])
 
-  const atualizar = useCallback(
-    (idLocal: string, mudanca: Partial<MidiaPendente>) => {
-      setPendentes((atuais) =>
-        atuais.map((p) => (p.idLocal === idLocal ? { ...p, ...mudanca } : p)),
+  const updatePending = useCallback(
+    (idLocal: string, changes: Partial<PendingMedia>) => {
+      setPendingMedia((current) =>
+        current.map((pendingItem) =>
+          pendingItem.idLocal === idLocal
+            ? { ...pendingItem, ...changes }
+            : pendingItem,
+        ),
       )
     },
     [],
   )
 
-  function aoEscolher(arquivos: File[]) {
-    setErro(null)
+  function handleFiles(files: File[]) {
+    setError(null)
 
-    const novos: MidiaPendente[] = []
-    let cabem = restantes
+    const newMedia: PendingMedia[] = []
+    let availableSlots = remainingSlots
 
-    for (const arquivo of arquivos) {
+    for (const file of files) {
       // Recusado AQUI, antes de qualquer processamento. Errar o formato não
       // deve nem acender indicador de carregamento.
-      if (!ACEITOS.includes(arquivo.type)) {
-        setErro(`"${arquivo.name}" não é uma foto nem um vídeo aceito.`)
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        setError(`"${file.name}" não é uma foto nem um vídeo aceito.`)
         continue
       }
-      if (cabem <= 0) {
-        setErro(`Este prato já chegou a ${MAX_MIDIAS_POR_ITEM} telas.`)
+      if (availableSlots <= 0) {
+        setError(`Este prato já chegou a ${MAX_MEDIA_PER_ITEM} telas.`)
         break
       }
 
-      novos.push({
+      newMedia.push({
         idLocal: crypto.randomUUID(),
-        arquivo,
-        previewUrl: URL.createObjectURL(arquivo),
-        kind: arquivo.type.startsWith('video/') ? 'video' : 'image',
+        arquivo: file,
+        previewUrl: URL.createObjectURL(file),
+        kind: file.type.startsWith('video/') ? 'video' : 'image',
         estado: 'pendente',
         progresso: 0,
       })
-      cabem -= 1
+      availableSlots -= 1
     }
 
-    if (novos.length > 0) setPendentes((atuais) => [...atuais, ...novos])
+    if (newMedia.length > 0) {
+      setPendingMedia((current) => [...current, ...newMedia])
+    }
   }
 
-  function removerPendente(idLocal: string) {
-    setPendentes((atuais) => {
-      const alvo = atuais.find((p) => p.idLocal === idLocal)
-      if (alvo) URL.revokeObjectURL(alvo.previewUrl)
-      return atuais.filter((p) => p.idLocal !== idLocal)
+  function removePending(idLocal: string) {
+    setPendingMedia((current) => {
+      const target = current.find((pendingItem) => pendingItem.idLocal === idLocal)
+      if (target) URL.revokeObjectURL(target.previewUrl)
+      return current.filter((pendingItem) => pendingItem.idLocal !== idLocal)
     })
   }
 
-  function moverPendente(indice: number, direcao: -1 | 1) {
-    setPendentes((atuais) => {
-      const destino = indice + direcao
-      if (destino < 0 || destino >= atuais.length) return atuais
-      const nova = [...atuais]
-      const [movida] = nova.splice(indice, 1)
-      nova.splice(destino, 0, movida)
-      return nova
+  function movePending(index: number, direction: -1 | 1) {
+    setPendingMedia((current) => {
+      const destination = index + direction
+      if (destination < 0 || destination >= current.length) return current
+      const nextOrder = [...current]
+      const [moved] = nextOrder.splice(index, 1)
+      nextOrder.splice(destination, 0, moved)
+      return nextOrder
     })
   }
 
-  function moverGravada(indice: number, direcao: -1 | 1) {
+  function moveSaved(index: number, direction: -1 | 1) {
     if (!itemId) return
-    const destino = indice + direcao
-    if (destino < 0 || destino >= gravadas.length) return
+    const destination = index + direction
+    if (destination < 0 || destination >= savedMedia.length) return
 
-    const nova = [...gravadas]
-    const [movida] = nova.splice(indice, 1)
-    nova.splice(destino, 0, movida)
+    const nextOrder = [...savedMedia]
+    const [moved] = nextOrder.splice(index, 1)
+    nextOrder.splice(destination, 0, moved)
 
     startTransition(async () => {
-      const resultado = await reorderItemMediaAction({
+      const result = await reorderItemMediaAction({
         itemId,
-        order: nova.map((entrada, posicao) => ({
-          id: entrada.id,
-          position: posicao,
+        order: nextOrder.map((entry, position) => ({
+          id: entry.id,
+          position,
         })),
       })
-      if (!resultado.ok) toast.add({ title: resultado.error, type: 'error' })
+      if (!result.ok) toast.add({ title: result.error, type: 'error' })
     })
   }
 
-  function removerGravada(mediaId: string) {
+  function removeSaved(mediaId: string) {
     startTransition(async () => {
-      const resultado = await deleteItemMediaAction(mediaId)
-      if (!resultado.ok) toast.add({ title: resultado.error, type: 'error' })
+      const result = await deleteItemMediaAction(mediaId)
+      if (!result.ok) toast.add({ title: result.error, type: 'error' })
     })
   }
 
   // A capa é opcional POR CONSTRUÇÃO (decisão C5 da Fase 2). Toda falha aqui
   // devolve undefined e o vídeo sobe do mesmo jeito.
-  async function subirCapa(
-    alvoItemId: string,
-    arquivo: File,
+  async function uploadPoster(
+    targetItemId: string,
+    file: File,
   ): Promise<string | undefined> {
-    const capa = await captureVideoPoster(arquivo)
-    if (!capa) return undefined
+    const poster = await captureVideoPoster(file)
+    if (!poster) return undefined
 
     // O tipo que o navegador DEVOLVEU, não o que foi pedido. Safari antigo
     // aceita o pedido de WebP e entrega PNG calado; subir esse arquivo como
     // .webp daria uma capa que nada desenha.
-    const mimeType = capa.type
+    const mimeType = poster.type
     if (!(MEDIA_LIMITS.image.mimes as readonly string[]).includes(mimeType)) {
       return undefined
     }
 
     const ticket = await createUploadTicketAction({
-      itemId: alvoItemId,
+      itemId: targetItemId,
       kind: 'image',
       mimeType,
     })
     if (!ticket.ok) return undefined
 
     try {
-      await uploadToSignedUrl(ticket.data.signedUrl, capa, mimeType)
+      await uploadToSignedUrl(ticket.data.signedUrl, poster, mimeType)
       return ticket.data.path
     } catch {
       // Capa perdida, vídeo segue. Não vale interromper por isso.
@@ -208,99 +223,99 @@ export function MediaEditor({
     }
   }
 
-  async function enviarUma(
-    alvoItemId: string,
-    pendente: MidiaPendente,
+  async function uploadOne(
+    targetItemId: string,
+    pendingItem: PendingMedia,
   ): Promise<boolean> {
-    const { idLocal, arquivo, kind } = pendente
+    const { idLocal, arquivo: file, kind } = pendingItem
 
     try {
-      atualizar(idLocal, { estado: 'comprimindo', progresso: 0, erro: undefined })
+      updatePending(idLocal, { estado: 'comprimindo', progresso: 0, erro: undefined })
 
-      let blob: Blob = arquivo
-      let largura: number | undefined
-      let altura: number | undefined
-      let duracaoMs: number | null = null
+      let blob: Blob = file
+      let width: number | undefined
+      let height: number | undefined
+      let durationMs: number | null = null
 
       if (kind === 'image') {
-        const resultado = await comprimirImagem(arquivo)
-        blob = resultado.blob
-        largura = resultado.largura
-        altura = resultado.altura
+        const result = await compressImage(file)
+        blob = result.blob
+        width = result.largura
+        height = result.altura
       } else {
-        duracaoMs = await readVideoDurationMs(arquivo)
-        if (duracaoMs !== null && duracaoMs > MAX_VIDEO_MS) {
-          atualizar(idLocal, {
+        durationMs = await readVideoDurationMs(file)
+        if (durationMs !== null && durationMs > MAX_VIDEO_MS) {
+          updatePending(idLocal, {
             estado: 'erro',
             erro: 'Mais de 15 segundos.',
           })
           return false
         }
 
-        const resultado = await comprimirVideo(arquivo, (pct) =>
-          atualizar(idLocal, { progresso: pct }),
+        const result = await compressVideo(file, (progress) =>
+          updatePending(idLocal, { progresso: progress }),
         )
         // `null` não é erro: é o fallback. Sem WebCodecs, ou com entrada que
         // a biblioteca não lê, o original sobe e o teto de peso protege.
-        if (resultado) {
-          blob = resultado.blob
-          largura = resultado.largura
-          altura = resultado.altura
+        if (result) {
+          blob = result.blob
+          width = result.largura
+          height = result.altura
         }
       }
 
       // O teto de peso vale sobre o arquivo QUE VAI SUBIR, e não sobre o
       // original — é o que torna a compressão útil em vez de decorativa.
-      const teto = MEDIA_LIMITS[kind].maxBytes
-      if (blob.size > teto) {
-        atualizar(idLocal, {
+      const maxBytes = MEDIA_LIMITS[kind].maxBytes
+      if (blob.size > maxBytes) {
+        updatePending(idLocal, {
           estado: 'erro',
-          erro: `Ficou em ${formatarTamanho(blob.size)}, acima do limite.`,
+          erro: `Ficou em ${formatFileSize(blob.size)}, acima do limite.`,
         })
         return false
       }
 
-      atualizar(idLocal, { estado: 'enviando', progresso: 0 })
+      updatePending(idLocal, { estado: 'enviando', progresso: 0 })
 
       const posterPath =
-        kind === 'video' ? await subirCapa(alvoItemId, arquivo) : undefined
+        kind === 'video' ? await uploadPoster(targetItemId, file) : undefined
 
       // O tipo do BLOB, não o do arquivo: depois da compressão eles divergem,
       // e mandar o antigo grava um arquivo com content-type errado.
-      const mimeType = blob.type || arquivo.type
+      const mimeType = blob.type || file.type
 
       const ticket = await createUploadTicketAction({
-        itemId: alvoItemId,
+        itemId: targetItemId,
         kind,
         mimeType,
       })
       if (!ticket.ok) {
-        atualizar(idLocal, { estado: 'erro', erro: ticket.error })
+        updatePending(idLocal, { estado: 'erro', erro: ticket.error })
         return false
       }
 
       await uploadToSignedUrl(ticket.data.signedUrl, blob, mimeType)
-      atualizar(idLocal, { progresso: 100 })
+      updatePending(idLocal, { progresso: 100 })
 
-      const registrada = await registerItemMediaAction({
-        itemId: alvoItemId,
+      const registered = await registerItemMediaAction({
+        itemId: targetItemId,
         kind,
         storagePath: ticket.data.path,
         posterPath,
-        width: largura,
-        height: altura,
-        durationMs: duracaoMs ?? undefined,
+        width,
+        height,
+        durationMs: durationMs ?? undefined,
       })
 
-      if (!registrada.ok) {
-        atualizar(idLocal, { estado: 'erro', erro: registrada.error })
+      if (!registered.ok) {
+        updatePending(idLocal, { estado: 'erro', erro: registered.error })
         return false
       }
 
-      atualizar(idLocal, { estado: 'pronta', progresso: 100 })
+      updatePending(idLocal, { estado: 'pronta', progresso: 100 })
       return true
     } catch {
-      atualizar(idLocal, {
+      updatePending(idLocal, {
         estado: 'erro',
         erro: 'Falha ao enviar. Tente de novo.',
       })
@@ -311,34 +326,38 @@ export function MediaEditor({
   useImperativeHandle(
     ref,
     () => ({
-      quantasPendentes: () =>
-        pendentesRef.current.filter((p) => p.estado !== 'pronta').length,
+      getPendingCount: () =>
+        pendingMediaRef.current.filter((pendingItem) => pendingItem.estado !== 'pronta').length,
 
-      async enviarPendentes(alvoItemId: string) {
-        const fila = pendentesRef.current.filter((p) => p.estado !== 'pronta')
-        if (fila.length === 0) return true
+      async uploadPending(targetItemId: string) {
+        const queue = pendingMediaRef.current.filter(
+          (pendingItem) => pendingItem.estado !== 'pronta',
+        )
+        if (queue.length === 0) return true
 
-        setEnviando(true)
-        let tudoCerto = true
+        setUploading(true)
+        let allSucceeded = true
 
         // Uma de cada vez, em ORDEM: a posição no banco é a ordem de chegada,
         // e enviar em paralelo embaralharia as telas do prato.
         //
         // Falha é ISOLADA: um `catch` por mídia dentro de `enviarUma`. A que
         // falhou fica em erro com o motivo; as outras seguem.
-        for (const pendente of fila) {
-          const certo = await enviarUma(alvoItemId, pendente)
-          if (!certo) tudoCerto = false
+        for (const pendingItem of queue) {
+          const succeeded = await uploadOne(targetItemId, pendingItem)
+          if (!succeeded) allSucceeded = false
         }
 
-        setEnviando(false)
+        setUploading(false)
 
-        if (tudoCerto) {
-          for (const p of pendentesRef.current) URL.revokeObjectURL(p.previewUrl)
-          setPendentes([])
+        if (allSucceeded) {
+          for (const pendingItem of pendingMediaRef.current) {
+            URL.revokeObjectURL(pendingItem.previewUrl)
+          }
+          setPendingMedia([])
         }
 
-        return tudoCerto
+        return allSucceeded
       },
     }),
     // `enviarUma` é recriada a cada render, mas só lê `pendentesRef` e props
@@ -348,82 +367,85 @@ export function MediaEditor({
     [],
   )
 
-  const bloqueado = ocupado || enviando
+  const busy = transitionPending || uploading
 
   return (
-    <div className="space-y-4">
-      {gravadas.length === 0 && pendentes.length === 0 ? (
+    <div className="space-y-3">
+      {savedMedia.length === 0 && pendingMedia.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           O cardápio público é um feed de fotos. Um prato sem foto nem vídeo
           não aparece nele — e impede a publicação.
         </p>
       ) : (
-        <AttachmentGroup className="scroll-fade-x scrollbar-none">
-          {gravadas.map((entrada, indice) => (
-            <div key={entrada.id} className="flex flex-col gap-2">
+        <AttachmentGroup className="scroll-fade-x scrollbar-none gap-2">
+          {savedMedia.map((entry, index) => (
+            <div key={entry.id} className="flex flex-col gap-2">
               <MediaItem
-                titulo={entrada.kind === 'video' ? 'Vídeo' : 'Foto'}
+                title={entry.kind === 'video' ? 'Vídeo' : 'Foto'}
                 previewUrl={
-                  entrada.kind === 'image'
-                    ? publicMediaUrl('image', entrada.storagePath)
-                    : entrada.posterPath
-                      ? publicMediaUrl('image', entrada.posterPath)
+                  entry.kind === 'image'
+                    ? publicMediaUrl('image', entry.storagePath)
+                    : entry.posterPath
+                      ? publicMediaUrl('image', entry.posterPath)
                       : null
                 }
-                kind={entrada.kind}
-                estado="pronta"
-                progresso={100}
-                primeira={indice === 0}
-                ultima={indice === gravadas.length - 1 && pendentes.length === 0}
-                ocupado={bloqueado}
-                onSubir={() => moverGravada(indice, -1)}
-                onDescer={() => moverGravada(indice, 1)}
-                onRemover={() => removerGravada(entrada.id)}
+                kind={entry.kind}
+                state="pronta"
+                progress={100}
+                first={index === 0}
+                last={index === savedMedia.length - 1 && pendingMedia.length === 0}
+                busy={busy}
+                selected={selectedMedia?.id === entry.id}
+                onSelect={() => setSelectedId(entry.id)}
+                onMoveUp={() => moveSaved(index, -1)}
+                onMoveDown={() => moveSaved(index, 1)}
+                onRemove={() => removeSaved(entry.id)}
               />
-              <MediaFocal media={entrada} />
             </div>
           ))}
 
-          {pendentes.map((pendente, indice) => (
+          {pendingMedia.map((pendingItem, index) => (
             <MediaItem
-              key={pendente.idLocal}
-              titulo={pendente.arquivo.name}
-              descricao={formatarTamanho(pendente.arquivo.size)}
-              previewUrl={pendente.kind === 'image' ? pendente.previewUrl : null}
-              kind={pendente.kind}
-              estado={pendente.estado}
-              progresso={pendente.progresso}
-              erro={pendente.erro}
-              primeira={gravadas.length === 0 && indice === 0}
-              ultima={indice === pendentes.length - 1}
-              ocupado={bloqueado}
-              onSubir={() => moverPendente(indice, -1)}
-              onDescer={() => moverPendente(indice, 1)}
-              onRemover={() => removerPendente(pendente.idLocal)}
+              key={pendingItem.idLocal}
+              title={pendingItem.arquivo.name}
+              description={formatFileSize(pendingItem.arquivo.size)}
+              previewUrl={pendingItem.kind === 'image' ? pendingItem.previewUrl : null}
+              kind={pendingItem.kind}
+              state={pendingItem.estado}
+              progress={pendingItem.progresso}
+              mediaError={pendingItem.erro}
+              first={savedMedia.length === 0 && index === 0}
+              last={index === pendingMedia.length - 1}
+              busy={busy}
+              onMoveUp={() => movePending(index, -1)}
+              onMoveDown={() => movePending(index, 1)}
+              onRemove={() => removePending(pendingItem.idLocal)}
             />
           ))}
         </AttachmentGroup>
       )}
 
+      {selectedMedia ? <MediaFocal key={selectedMedia.id} media={selectedMedia} /> : null}
+
       <MediaDropzone
-        onArquivos={aoEscolher}
-        aceitos={ACEITOS}
-        desabilitado={bloqueado}
-        restantes={restantes}
+        onFiles={handleFiles}
+        acceptedTypes={ACCEPTED_TYPES}
+        disabled={busy}
+        remaining={remainingSlots}
       />
 
-      {pendentes.length > 0 ? (
+      {pendingMedia.length > 0 ? (
         <p className="text-small text-muted-foreground">
-          {pendentes.length === 1
+          {pendingMedia.length === 1
             ? '1 arquivo ainda não foi enviado.'
-            : `${pendentes.length} arquivos ainda não foram enviados.`}{' '}
+            : `${pendingMedia.length} arquivos ainda não foram enviados.`}{' '}
           Eles sobem quando você salvar o item.
         </p>
       ) : null}
 
-      {erro ? (
+      {error ? (
         <p role="alert" className="text-sm text-destructive">
-          {erro}
+          {error}
         </p>
       ) : null}
     </div>

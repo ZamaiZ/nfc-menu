@@ -74,8 +74,8 @@ export function PublishBar({
     // nenhuma tela — era uma das 42 peças do sistema de design que o painel
     // ignorava, e é por isso que cada superfície tinha números um pouco
     // diferentes.
-    <Card className="mb-8 flex-row flex-wrap items-center gap-x-4 gap-y-3 rounded-[18px] border-border/70 p-4 shadow-[var(--shadow-1)] sm:p-5">
-      <span className="flex items-center gap-2 text-card font-semibold">
+    <Card className="mb-6 flex-row flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border-border/70 p-3 shadow-[var(--shadow-1)] sm:p-4">
+      <span className="flex items-center gap-2 text-small font-semibold">
         <RiGlobalLine
           className={noAr ? 'size-4 text-status-active' : 'size-4 text-muted-foreground'}
           aria-hidden="true"
@@ -83,7 +83,7 @@ export function PublishBar({
         {ROTULO[situacao]}
       </span>
 
-      <p className="text-small text-muted-foreground">{APOIO[situacao]}</p>
+      <p className="min-w-0 flex-1 text-small text-muted-foreground">{APOIO[situacao]}</p>
 
       {/* O endereço público passa a ser COPIÁVEL. Ele é a coisa que o dono
           mais precisa levar para fora do painel — vai na plaquinha, no
@@ -92,11 +92,11 @@ export function PublishBar({
         <Copiavel
           valor={publicUrl}
           rotulo="endereço do cardápio"
-          className="w-full sm:w-auto sm:min-w-[18rem]"
+          className="order-last w-full min-w-0 sm:order-none sm:w-[min(24rem,38vw)]"
         />
       ) : null}
 
-      <div className="ml-auto flex flex-wrap gap-2">
+      <div className="ml-auto flex shrink-0 flex-wrap gap-2">
         {noAr ? (
           // Link estilizado, e não Button com `render`. A doc local do Base UI
           // (`button.md:150`) é explícita: âncora tem semântica própria e não
