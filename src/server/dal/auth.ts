@@ -67,6 +67,8 @@ export async function requireUser(): Promise<AuthUser> {
 
 type GuardFunction = 'is_platform_admin' | 'is_member' | 'is_restaurant_admin'
 
+export type PlatformAdminStatus = 'allowed' | 'denied' | 'unverified'
+
 async function callGuard(
   fn: GuardFunction,
   args: Record<string, unknown> = {},
@@ -81,9 +83,29 @@ async function callGuard(
   return !error && data === true
 }
 
+export const getPlatformAdminStatus = cache(
+  async (): Promise<PlatformAdminStatus> => {
+    if (!(await getCurrentUser())) return 'denied'
+    const supabase = await createUserClient(await currentTerritory())
+    const { data, error } = await supabase.rpc('is_platform_admin')
+    if (error) return 'unverified'
+    return data === true ? 'allowed' : 'denied'
+  },
+)
+
 export async function requirePlatformAdmin(): Promise<AuthUser> {
   const user = await requireUser()
-  if (!(await callGuard('is_platform_admin'))) throw new ForbiddenError()
+  if ((await getPlatformAdminStatus()) !== 'allowed') throw new ForbiddenError()
+  return user
+}
+
+export async function requirePlatformAdminPage(): Promise<AuthUser> {
+  const user = await requireUser()
+  const status = await getPlatformAdminStatus()
+  if (status === 'denied') {
+    redirect('/entrar?motivo=sem-acesso')
+  }
+  if (status === 'unverified') throw new ForbiddenError()
   return user
 }
 

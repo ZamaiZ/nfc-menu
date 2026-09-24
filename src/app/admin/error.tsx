@@ -1,7 +1,8 @@
 'use client'
 
-import { RouteErrorState } from '@/components/shell/route-error-state'
+import { LuTriangleAlert } from 'react-icons/lu'
+import { RetryButton, StateCard } from '@/components/console/state-card'
 
-export default function AdminError({ retry }: { retry: () => void }) {
-  return <RouteErrorState retry={retry} />
+export default function AdminError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  return <main className="tv-error-page"><StateCard icon={<LuTriangleAlert />} title="Não foi possível carregar" description="Verifique sua conexão e tente novamente." action={<RetryButton onClick={reset} />} /></main>
 }

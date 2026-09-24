@@ -409,7 +409,7 @@ export async function getRestaurantForAdmin(
   const supabase = await db()
   const { data, error } = await supabase
     .from('restaurants')
-    .select('id, slug, name, description, status, contact, created_at, deleted_at')
+    .select('id, slug, name, description, status, contact, created_at, updated_at, segment, deleted_at')
     .eq('id', id)
     .maybeSingle()
 
@@ -428,6 +428,8 @@ export async function getRestaurantForAdmin(
     status: data.status,
     contact: (data.contact ?? {}) as Record<string, string>,
     createdAt: data.created_at,
+    updatedAt: data.updated_at,
+    segment: data.segment,
     deletedAt: data.deleted_at,
   }
 }

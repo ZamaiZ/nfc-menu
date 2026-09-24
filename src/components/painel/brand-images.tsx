@@ -142,13 +142,13 @@ function Slot({
           sempre existe. */}
       <div className="mt-3 min-w-0">
         <MediaDropzone
-          onArquivos={(arquivos) => {
-            const primeiro = arquivos[0]
+          onFiles={(files) => {
+            const primeiro = files[0]
             if (primeiro) enviar(primeiro)
           }}
-          aceitos={MEDIA_LIMITS.image.mimes}
-          desabilitado={pending}
-          restantes={1}
+          acceptedTypes={MEDIA_LIMITS.image.mimes}
+          disabled={pending}
+          remaining={1}
         />
       </div>
 

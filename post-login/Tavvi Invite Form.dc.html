@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="display:flex;flex-direction:column;gap:16px;font-family:'Plus Jakarta Sans',sans-serif">
+  <sc-if value="{{ vm.isForm }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-direction:column;gap:6px;padding:0 4px">
+      <span style="font-size:24px;line-height:29px;font-weight:700;letter-spacing:-0.6px;color:var(--text)">{{ vm.title }}<span style="color:var(--accent)">.</span></span>
+      <span style="font-size:13.5px;line-height:19px;font-weight:500;color:var(--muted)">{{ vm.desc }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style="font-size:13px;font-weight:600;color:var(--muted)">E-mail (opcional)</span>
+      <label style="{{ vm.emailFieldStyle }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+        <input type="email" value="{{ vm.email }}" onChange="{{ vm.onEmail }}" onFocus="{{ vm.onFocus }}" onBlur="{{ vm.onBlur }}" readOnly="{{ vm.emailLocked }}" placeholder="Qualquer e-mail" aria-label="E-mail (opcional)" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font:500 14.5px 'Plus Jakarta Sans',sans-serif;color:var(--text)">
+      </label>
+      <sc-if value="{{ vm.emailError }}" hint-placeholder-val="{{ false }}">
+        <span role="alert" style="font-size:12.5px;font-weight:500;color:var(--dangerT)">{{ vm.emailError }}</span>
+      </sc-if>
+      <span style="font-size:12.5px;line-height:18px;font-weight:500;color:var(--subtle)">{{ vm.emailHint }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style="font-size:13px;font-weight:600;color:var(--muted)">Validade</span>
+      <div style="height:54px;box-sizing:border-box;border-radius:18px;border:1px solid var(--line);background:var(--field);padding:0 7px;display:flex;align-items:center;justify-content:space-between">
+        <button type="button" onClick="{{ vm.onMinus }}" disabled="{{ vm.minusDisabled }}" aria-label="Menos dias" style="{{ vm.minusStyle }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+        <span style="font-size:15px;font-weight:600;color:var(--text)">{{ vm.daysLabel }}</span>
+        <button type="button" onClick="{{ vm.onPlus }}" disabled="{{ vm.plusDisabled }}" aria-label="Mais dias" style="{{ vm.plusStyle }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button>
+      </div>
+      <span style="font-size:12.5px;line-height:18px;font-weight:500;color:var(--subtle)">Escolha entre 1 e 30 dias. Depois desse prazo o link para de funcionar e você emite outro. Quem aceitar dentro do prazo não perde o acesso depois.</span>
+    </div>
+    <button type="button" onClick="{{ vm.onSubmit }}" disabled="{{ vm.pending }}" style="{{ vm.ctaStyle }}" style-hover="background:#BEF94A;">
+      <span>{{ vm.ctaLabel }}</span>
+      <span style="width:44px;height:44px;border-radius:15px;background:#0A0C09;color:#B2F52F;display:flex;align-items:center;justify-content:center">
+        <sc-if value="{{ vm.pending }}" hint-placeholder-val="{{ false }}"><span style="{{ vm.spinnerStyle }}"></span></sc-if>
+        <sc-if value="{{ vm.idle }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></sc-if>
+      </span>
+    </button>
+  </sc-if>
+  <sc-if value="{{ vm.isCreated }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="width:46px;height:46px;flex-shrink:0;border-radius:14px;background:#B2F52F;color:#0A0C09;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+      <span style="display:flex;flex-direction:column;gap:2px">
+        <span style="font-size:22px;line-height:27px;font-weight:700;letter-spacing:-0.5px;color:var(--text)">Convite criado</span>
+        <span style="font-size:13px;font-weight:500;color:var(--muted)">Copie agora. O link não será exibido novamente.</span>
+      </span>
+    </div>
+    <div style="display:flex;gap:10px;padding:14px;border-radius:16px;background:var(--warnS);color:var(--warnT);font-size:12.5px;line-height:18px;font-weight:500">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+      <span>O sistema guarda apenas uma marca deste link, e não consegue reconstruí-lo. Se você fechar sem copiar, terá que emitir outro convite.</span>
+    </div>
+    <div style="min-height:82px;box-sizing:border-box;padding:14px;border-radius:18px;border:1px dashed var(--line2);background:var(--field);display:flex;align-items:center;font:500 12.5px/19px 'JetBrains Mono',monospace;color:var(--text);overflow-wrap:anywhere;user-select:all">{{ vm.link }}</div>
+    <button type="button" onClick="{{ vm.onCopy }}" style="{{ vm.copyStyle }}">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>{{ vm.copyLabel }}
+    </button>
+    <button type="button" onClick="{{ vm.onFinish }}" disabled="{{ vm.notCopied }}" style="{{ vm.finishStyle }}">
+      <span>Já copiei o link</span>
+      <span style="width:44px;height:44px;border-radius:15px;background:#0A0C09;color:#B2F52F;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+    </button>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:420,&quot;height&quot;:600},&quot;vm&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;object&quot;}}"></script>
+</body>
+</html>

@@ -1,25 +1,32 @@
-import { AuthShell } from '@/components/auth/auth-shell'
-import { SignInForm } from '@/components/auth/sign-in-form'
+import { redirect } from 'next/navigation'
+import { TavviAuthShell } from '@/components/auth/tavvi/tavvi-auth-shell'
+import { TavviSignInForm } from '@/components/auth/tavvi/tavvi-sign-in-form'
 import { safeNextPath } from '@/domain/common'
+import { getPlatformAdminStatus } from '@/server/dal/auth'
 
 export const metadata = { title: 'Entrar' }
 
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>
+  searchParams: Promise<{ next?: string; motivo?: string }>
 }) {
-  const { next } = await searchParams
+  const { next, motivo } = await searchParams
+  const safeNext = safeNextPath(next === '/' ? undefined : next, '/convites')
+  if ((await getPlatformAdminStatus()) === 'allowed') {
+    redirect(safeNext)
+  }
 
   return (
-    <AuthShell
-      title="Console da plataforma"
-      subtitle="Entre para gerenciar os restaurantes."
+    <TavviAuthShell
+      badge="Console · Acesso de administrador"
+      title="Bem-vindo de volta"
+      subtitle="Restaurantes, cardápios, mesas e pedidos em um só lugar."
     >
-      {/* Sanitizado aqui E de novo dentro da action. O campo oculto é
-          controlado pelo navegador, então o valor volta pelo formulário e
-          não pode ser confiado só porque saiu daqui limpo. */}
-      <SignInForm next={safeNextPath(next, '/')} />
-    </AuthShell>
+      <TavviSignInForm
+        next={safeNext}
+        denied={motivo === 'sem-acesso'}
+      />
+    </TavviAuthShell>
   )
 }

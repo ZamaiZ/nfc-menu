@@ -2,6 +2,8 @@
 
 import { redirect } from 'next/navigation'
 import { safeNextPath } from '@/domain/common'
+import { currentTerritory } from '@/server/dal/auth'
+import { listMyRestaurants } from '@/server/dal/restaurants'
 import * as dal from '@/server/dal/session'
 import { runAction, type ActionResult } from './result'
 
@@ -26,11 +28,31 @@ export async function signInAction(
   // navegador, então o valor não pode ser confiado só porque a página o
   // entregou limpo.
   //
-  // O padrão deixou de ser `/` na Fase 4. Cair na rota ambígua logo depois de
-  // entrar era exatamente o momento em que a página do território público
-  // aparecia dentro do painel. `/restaurantes` existe nos DOIS territórios
-  // privados, então o padrão vale para os dois sem ramificação.
-  redirect(safeNextPath(formData.get('next'), '/restaurantes'))
+  // Cada território tem um destino inicial explícito. A raiz é ambígua com o
+  // site público; no painel, a lista existente resolve o atalho para uma única
+  // loja antes do redirect final.
+  const territory = await currentTerritory()
+  const defaultNext = territory === 'admin' ? '/convites' : '/restaurantes'
+  const requestedNext = safeNextPath(formData.get('next'), defaultNext)
+  const next = requestedNext === '/' ? defaultNext : requestedNext
+
+  if (territory === 'painel' && next === '/restaurantes') {
+    let restaurants: Awaited<ReturnType<typeof listMyRestaurants>> = []
+
+    try {
+      restaurants = await listMyRestaurants()
+    } catch (error) {
+      // A falha ao resolver o atalho nÃ£o pode transformar um login concluÃ­do
+      // em erro; a tela de seleÃ§Ã£o continua sendo o destino de recuperaÃ§Ã£o.
+      console.error('[auth] Could not resolve the panel home restaurant', error)
+    }
+
+    if (restaurants.length === 1) {
+      redirect(`/restaurantes/${restaurants[0].id}`)
+    }
+  }
+
+  redirect(next)
 }
 
 export async function signUpAction(

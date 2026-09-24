@@ -20,6 +20,16 @@ export async function createPlatformInviteAction(
   })
 }
 
+export async function rotatePlatformInviteAction(
+  inviteId: unknown,
+): Promise<ActionResult<{ id: string; link: string }>> {
+  return runAction(async () => {
+    const invite = await dal.rotatePlatformInvite(inviteId)
+    revalidateListas()
+    return invite
+  })
+}
+
 export async function createTeamInviteAction(
   input: unknown,
 ): Promise<ActionResult<{ id: string; link: string }>> {

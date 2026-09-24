@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'Plus Jakarta Sans';src:url(fonts/PlusJakartaSans_400Regular.ttf);font-weight:400}
+@font-face{font-family:'Plus Jakarta Sans';src:url(fonts/PlusJakartaSans_500Medium.ttf);font-weight:500}
+@font-face{font-family:'Plus Jakarta Sans';src:url(fonts/PlusJakartaSans_600SemiBold.ttf);font-weight:600}
+@font-face{font-family:'Plus Jakarta Sans';src:url(fonts/PlusJakartaSans_700Bold.ttf);font-weight:700}
+@font-face{font-family:'Plus Jakarta Sans';src:url(fonts/PlusJakartaSans_800ExtraBold.ttf);font-weight:800}
+@font-face{font-family:'JetBrains Mono';src:url(fonts/JetBrainsMono_500Medium.ttf);font-weight:500}
+@keyframes tv-spin{to{transform:rotate(360deg)}}
+html,body{margin:0;height:100%;overflow:hidden;background:#070806}
+a{color:#557D00}a:hover{color:#B2F52F}
+input::placeholder{color:var(--subtle)}
+.tv-noscroll{scrollbar-width:none}.tv-noscroll::-webkit-scrollbar{display:none}
+button:focus-visible,input:focus-visible{outline:2px solid #B2F52F;outline-offset:2px}
+</style>
+</helmet>
+<div ref="{{ rootRef }}" style="position:fixed;inset:0;overflow:hidden;background:#070806">
+<div style="{{ themeVars }}">
+<div style="position:absolute;inset:0;background:var(--backdrop);transition:background-color .35s"></div>
+<div style="{{ stageStyle }}">
+
+<sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+<div data-screen-label="Console desktop" style="position:absolute;inset:0;background:var(--rail);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-variant-numeric:tabular-nums;transition:background-color .35s,color .35s">
+  <svg width="{{ W }}" height="{{ H }}" viewBox="{{ viewBox }}" style="position:absolute;left:0;top:0;pointer-events:none">
+    <path ref="{{ pathRef }}" d="{{ panelD }}" style="fill:var(--panel);stroke:var(--line);stroke-width:1;transition:fill .35s"></path>
+  </svg>
+
+  <aside ref="{{ railRef }}" aria-label="Navegação principal" onMouseEnter="{{ onRailEnter }}" onMouseLeave="{{ onRailLeave }}" style="position:absolute;left:0;top:0;bottom:0;width:88px;overflow:hidden;z-index:3">
+    <div style="position:absolute;left:22px;top:22px;display:flex;align-items:center;gap:12px;white-space:nowrap">
+      <span style="width:44px;height:44px;flex-shrink:0;border-radius:14px;background:linear-gradient(135deg,#121510,#0E120C);box-shadow:inset 0 0 0 1px rgba(244,246,240,0.10);display:flex;align-items:center;justify-content:center"><img src="assets/tavvi-brandmark.png" alt="Tavvi" style="width:30px;height:30px;object-fit:contain"></span>
+      <span style="{{ labelStyle }}">
+        <span style="display:block;font-size:10.5px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--subtle)">Tavvi</span>
+        <span style="display:block;margin-top:3px;font-size:14px;font-weight:700;color:var(--text)">Console</span>
+      </span>
+    </div>
+    <button type="button" onClick="{{ openPalette }}" title="Buscar página (Ctrl K)" style="position:absolute;left:22px;top:92px;height:44px;width:calc(100% - 44px);min-width:44px;box-sizing:border-box;padding:0 12px;border-radius:15px;border:1px solid var(--line);background:var(--field);color:var(--muted);display:flex;align-items:center;gap:10px;cursor:pointer;font-family:inherit;white-space:nowrap;overflow:hidden;transition:border-color .15s,background-color .35s" style-hover="border-color:var(--line2);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="{{ labelFlexStyle }}">
+        <span style="font-size:13px;font-weight:500">Buscar página</span>
+        <span style="display:flex;gap:3px;font:500 10.5px 'JetBrains Mono',monospace;color:var(--subtle)"><span style="padding:2px 5px;border-radius:5px;border:1px solid var(--line)">Ctrl</span><span style="padding:2px 5px;border-radius:5px;border:1px solid var(--line)">K</span></span>
+      </span>
+    </button>
+    <div style="position:absolute;left:22px;right:22px;top:150px;height:1px;background:var(--line)"></div>
+
+    <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="2">
+      <button type="button" onClick="{{ item.onClick }}" aria-current="{{ item.current }}" style="{{ item.rowStyle }}">
+        <span style="{{ item.tileStyle }}">
+          <sc-if value="{{ item.isMail }}" hint-placeholder-val="{{ true }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg></sc-if>
+          <sc-if value="{{ item.isStore }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"></path><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"></path><path d="M2 7h20"></path><path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"></path></svg></sc-if>
+        </span>
+        <span style="{{ labelStyle }}">
+          <span style="{{ item.labelColor }}">{{ item.label }}</span>
+          <span style="display:block;margin-top:2px;font-size:12px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ item.sub }}</span>
+        </span>
+      </button>
+    </sc-for>
+
+    <button type="button" onClick="{{ togglePinned }}" title="{{ pinTitle }}" style="position:absolute;left:22px;bottom:84px;height:44px;width:calc(100% - 44px);min-width:44px;box-sizing:border-box;padding:0 12px;border-radius:15px;border:none;background:transparent;color:var(--muted);display:flex;align-items:center;gap:12px;cursor:pointer;font-family:inherit;white-space:nowrap;overflow:hidden;transition:background-color .15s,color .15s" style-hover="background:var(--hover2);color:var(--text);">
+      <span style="{{ pinIconStyle }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path><path d="m16 15-3-3 3-3"></path></svg></span>
+      <span style="{{ labelFlexStyle }}"><span style="font-size:13px;font-weight:600">Recolher menu</span><span style="font:500 10.5px 'JetBrains Mono',monospace;color:var(--subtle);padding:2px 5px;border-radius:5px;border:1px solid var(--line)">Ctrl B</span></span>
+    </button>
+    <button type="button" onClick="{{ toggleAccount }}" aria-label="Conta" style="position:absolute;left:22px;bottom:24px;height:48px;width:calc(100% - 44px);min-width:44px;box-sizing:border-box;padding:0;border:none;background:transparent;display:flex;align-items:center;gap:12px;cursor:pointer;font-family:inherit;white-space:nowrap;overflow:hidden;text-align:left">
+      <span style="{{ avatarStyle }}">E</span>
+      <span style="{{ labelStyle }}">
+        <span style="display:block;font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis">eduardozamai@gmail.com</span>
+        <span style="display:block;margin-top:2px;font-size:12px;font-weight:500;color:var(--muted)">Administrador da plataforma</span>
+      </span>
+    </button>
+  </aside>
+
+  <main ref="{{ contentRef }}" class="tv-noscroll" style="position:absolute;left:88px;top:12px;right:12px;bottom:12px;border-radius:28px;overflow:auto;z-index:2">
+    <div style="box-sizing:border-box;max-width:1320px;margin:0 auto;padding:28px 32px 40px">
+      <div style="{{ enter0 }}">
+        <div style="position:relative;height:236px">
+          <div ref="{{ heroRef }}" style="position:absolute;inset:0;overflow:hidden;border-radius:30px;background:radial-gradient(55% 95% at 92% 115%, rgba(178,245,47,0.22), transparent 70%), linear-gradient(135deg,#121510,#0E120C)">
+            <img src="assets/tavvi-brandmark.png" alt="" style="position:absolute;right:230px;bottom:-150px;width:340px;height:340px;object-fit:contain;opacity:0.16;transform:rotate(-8deg)">
+          </div>
+          <div style="position:absolute;inset:0;box-sizing:border-box;padding:26px 30px 24px;display:flex;flex-direction:column;justify-content:space-between">
+            <span style="height:28px;align-self:flex-start;display:flex;align-items:center;gap:8px;padding:0 12px 0 10px;border-radius:14px;background:rgba(178,245,47,0.10)">
+              <span style="width:6px;height:6px;border-radius:3px;background:#B2F52F;box-shadow:0 0 0 3px rgba(178,245,47,0.2)"></span>
+              <span style="font-size:12px;font-weight:600;color:#C9F870">Plataforma</span>
+            </span>
+            <div style="display:flex;flex-direction:column;gap:8px;max-width:560px">
+              <span style="font-size:46px;line-height:48px;font-weight:800;letter-spacing:-1.8px;color:#F4F6F0">{{ heroTitle }}<span style="color:#B2F52F">.</span></span>
+              <span style="font-size:15px;line-height:22px;font-weight:500;color:#A9AEA3;text-wrap:pretty">{{ heroDesc }}</span>
+            </div>
+            <span style="font-size:13px;font-weight:600;color:#A9AEA3">{{ heroSummary }}</span>
+          </div>
+          <sc-if value="{{ isConvites }}" hint-placeholder-val="{{ true }}">
+            <button type="button" onClick="{{ openCreateNew }}" style="position:absolute;top:0;right:0;width:200px;height:60px;box-sizing:border-box;padding:0 7px 0 22px;border:none;border-radius:20px;background:#B2F52F;color:#0A0C09;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:inherit;box-shadow:0 14px 34px -14px rgba(178,245,47,0.55);transition:background-color .2s,transform .12s" style-hover="background:#BEF94A;" style-active="transform:scale(0.985);">
+              <span style="font-size:14px;font-weight:700">Novo convite</span>
+              <span style="width:46px;height:46px;border-radius:15px;background:#0A0C09;color:#B2F52F;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span>
+            </button>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="{{ enter1 }}">
+        <div style="display:flex;align-items:center;gap:12px;margin:18px 0 14px;flex-wrap:wrap">
+          <label style="flex:0 1 340px;min-width:220px;height:48px;box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:0 16px;border-radius:17px;background:var(--surface);border:1px solid var(--line);color:var(--muted);transition:background-color .35s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="{{ searchPlaceholder }}" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font:500 14px 'Plus Jakarta Sans',sans-serif;color:var(--text)">
+          </label>
+          <sc-if value="{{ isConvites }}" hint-placeholder-val="{{ true }}">
+            <div class="tv-noscroll" style="display:flex;gap:8px;overflow-x:auto;min-width:0;flex:1">
+              <sc-for list="{{ chips }}" as="chip" hint-placeholder-count="5">
+                <button type="button" onClick="{{ chip.onClick }}" style="{{ chip.style }}"><span>{{ chip.label }}</span><span style="{{ chip.countStyle }}">{{ chip.count }}</span></button>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="{{ enter2 }}">
+        <sc-if value="{{ showInviteTable }}" hint-placeholder-val="{{ true }}">
+          <div style="border-radius:22px;background:var(--surface);border:1px solid var(--line);overflow:hidden;transition:background-color .35s">
+            <div style="display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 124px;align-items:center;height:46px;padding:0 20px;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--subtle)">
+              <span>Destinatário</span><span>Situação</span><span>Criado em</span><span>Válido até</span><span></span>
+            </div>
+            <sc-for list="{{ inviteRows }}" as="row" hint-placeholder-count="2">
+              <div role="button" onClick="{{ row.onOpen }}" onMouseEnter="{{ row.onEnter }}" onMouseLeave="{{ row.onLeave }}" style="{{ row.style }}">
+                <span style="display:flex;align-items:center;gap:14px;min-width:0">
+                  <span style="width:42px;height:42px;flex-shrink:0;border-radius:14px;background:var(--field);color:var(--muted);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg></span>
+                  <span style="min-width:0">
+                    <span style="display:block;font-size:14.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ row.title }}</span>
+                    <span style="display:block;margin-top:3px;font-size:12.5px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ row.meta }}</span>
+                  </span>
+                </span>
+                <span><span style="{{ row.badgeStyle }}">{{ row.statusLabel }}</span></span>
+                <span style="font-size:13.5px;font-weight:500;color:var(--muted)">{{ row.created }}</span>
+                <span style="font-size:13.5px;font-weight:500;color:var(--muted)">{{ row.valid }}</span>
+                <span style="display:flex;justify-content:flex-end;align-items:center;gap:6px">
+                  <sc-if value="{{ row.isPending }}" hint-placeholder-val="{{ false }}">
+                    <button type="button" onClick="{{ row.onRevoke }}" title="Revogar convite" style="{{ row.revokeStyle }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></svg></button>
+                  </sc-if>
+                  <button type="button" onClick="{{ row.onRotate }}" title="{{ row.rotateTitle }}" style="{{ row.actionStyle }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg></button>
+                  <span style="{{ row.chevronStyle }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"></path></svg></span>
+                </span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noFilteredInvites }}" hint-placeholder-val="{{ false }}">
+              <div style="border-top:1px solid var(--line);padding:36px 20px;text-align:center;font-size:13.5px;font-weight:500;color:var(--muted)">{{ emptyFilterText }}</div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showInviteEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="min-height:360px;box-sizing:border-box;border-radius:22px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:40px;text-align:center">
+            <span style="width:56px;height:56px;border-radius:18px;background:var(--accentS);color:var(--accent);display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg></span>
+            <span style="font-size:20px;font-weight:700;letter-spacing:-0.4px;color:var(--text)">Nenhum convite ainda</span>
+            <span style="max-width:380px;font-size:14px;line-height:21px;font-weight:500;color:var(--muted);text-wrap:pretty">Emita o primeiro. Quem receber cria a conta, cria o restaurante e já entra como administrador dele.</span>
+            <button type="button" onClick="{{ openCreateNew }}" style="margin-top:6px;width:220px;height:58px;box-sizing:border-box;padding:0 7px 0 22px;border:none;border-radius:20px;background:#B2F52F;color:#0A0C09;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font:700 14px 'Plus Jakarta Sans',sans-serif" style-hover="background:#BEF94A;">
+              <span>Novo convite</span>
+              <span style="width:44px;height:44px;border-radius:15px;background:#0A0C09;color:#B2F52F;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span>
+            </button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isRestaurantes }}" hint-placeholder-val="{{ false }}">
+          <div style="border-radius:22px;background:var(--surface);border:1px solid var(--line);overflow:hidden">
+            <div style="display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1fr) 56px;align-items:center;height:46px;padding:0 20px;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--subtle)">
+              <span>Restaurante</span><span>Endereço</span><span>Tipo</span><span>Situação</span><span></span>
+            </div>
+            <sc-for list="{{ restaurantRows }}" as="r" hint-placeholder-count="1">
+              <div role="button" onClick="{{ r.onOpen }}" onMouseEnter="{{ r.onEnter }}" onMouseLeave="{{ r.onLeave }}" style="{{ r.style }}">
+                <span style="display:flex;align-items:center;gap:14px;min-width:0">
+                  <span style="width:42px;height:42px;flex-shrink:0;border-radius:14px;background:var(--accentS);color:var(--accent);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center">{{ r.initials }}</span>
+                  <span style="font-size:14.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span>
+                </span>
+                <span style="font:500 13px 'JetBrains Mono',monospace;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">/{{ r.slug }}</span>
+                <span style="font-size:13.5px;font-weight:500;color:var(--muted)">{{ r.type }}</span>
+                <span><span style="{{ r.badgeStyle }}">{{ r.statusLabel }}</span></span>
+                <span style="{{ r.chevronStyle }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"></path></svg></span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noRestaurants }}" hint-placeholder-val="{{ false }}">
+              <div style="border-top:1px solid var(--line);padding:36px 20px;text-align:center;font-size:13.5px;font-weight:500;color:var(--muted)">{{ emptyRestText }}</div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </main>
+
+  <div onClick="{{ closeTopDrawer }}" style="{{ drawerScrim }}"></div>
+
+  <section aria-label="Detalhe do convite" style="{{ inviteDrawerStyle }}">
+    <div style="height:68px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px">
+      <span style="font-size:15px;font-weight:700;color:var(--text)">Convite</span>
+      <button type="button" onClick="{{ closeInvite }}" aria-label="Fechar" style="width:40px;height:40px;border-radius:13px;border:1px solid var(--line);background:var(--surface);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="color:var(--text);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+    </div>
+    <div class="tv-noscroll" style="flex:1;overflow:auto;padding:0 18px 20px">
+      <sc-if value="{{ hasInviteVm }}" hint-placeholder-val="{{ false }}">
+        <dc-import name="Tavvi Invite Detail" vm="{{ inviteVm }}" hint-size="100%,560px"></dc-import>
+      </sc-if>
+    </div>
+  </section>
+
+  <section aria-label="Detalhe do restaurante" style="{{ restDrawerStyle }}">
+    <div style="height:68px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px">
+      <span style="font-size:15px;font-weight:700;color:var(--text)">Restaurante</span>
+      <button type="button" onClick="{{ closeRest }}" aria-label="Fechar" style="width:40px;height:40px;border-radius:13px;border:1px solid var(--line);background:var(--surface);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="color:var(--text);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+    </div>
+    <div class="tv-noscroll" style="flex:1;overflow:auto;padding:0 18px 20px">
+      <sc-if value="{{ hasRestVm }}" hint-placeholder-val="{{ false }}">
+        <dc-import name="Tavvi Restaurant Detail" vm="{{ restVm }}" hint-size="100%,900px"></dc-import>
+      </sc-if>
+    </div>
+  </section>
+
+  <section aria-label="Novo convite" style="{{ sheetDrawerStyle }}">
+    <div style="height:60px;flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;padding:0 16px">
+      <button type="button" onClick="{{ closeSheet }}" aria-label="Fechar" style="width:40px;height:40px;border-radius:13px;border:1px solid var(--line);background:var(--surface);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="color:var(--text);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+    </div>
+    <div class="tv-noscroll" style="flex:1;overflow:auto;padding:0 22px 24px">
+      <dc-import name="Tavvi Invite Form" vm="{{ formVm }}" hint-size="100%,520px"></dc-import>
+    </div>
+  </section>
+
+  <div onMouseEnter="{{ onFlyEnter }}" onMouseLeave="{{ onRailLeave }}" style="{{ flyoutStyle }}">
+    <div style="padding:10px 12px 8px;display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.12em;color:var(--subtle)">CONSOLE</span>
+      <span style="font-size:11.5px;font-weight:500;color:var(--subtle)">Administração da plataforma</span>
+    </div>
+    <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="2">
+      <button type="button" onClick="{{ item.onClick }}" style="{{ item.flyRowStyle }}" style-hover="background:var(--field);">
+        <span style="{{ item.flyTileStyle }}">
+          <sc-if value="{{ item.isMail }}" hint-placeholder-val="{{ true }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg></sc-if>
+          <sc-if value="{{ item.isStore }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"></path><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"></path><path d="M2 7h20"></path><path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"></path></svg></sc-if>
+        </span>
+        <span style="flex:1;min-width:0;text-align:left">
+          <span style="display:block;font-size:14px;font-weight:600;color:var(--text)">{{ item.label }}</span>
+          <span style="display:block;margin-top:2px;font-size:12px;font-weight:500;color:var(--muted)">{{ item.sub }}</span>
+        </span>
+        <span style="font-size:12px;font-weight:500;color:var(--subtle);white-space:nowrap">{{ item.count }}</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"></path></svg>
+      </button>
+    </sc-for>
+    <div style="margin:6px 4px 2px;padding:10px 8px 4px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:12px;font-weight:500;color:var(--muted)">Fixar menu aberto</span>
+      <span style="font:500 10.5px 'JetBrains Mono',monospace;color:var(--subtle);padding:2px 6px;border-radius:5px;border:1px solid var(--line)">Ctrl B</span>
+    </div>
+  </div>
+
+  <div onClick="{{ closeAccount }}" style="{{ accountCatcher }}"></div>
+  <div style="{{ accountStyle }}">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="width:44px;height:44px;flex-shrink:0;border-radius:15px;background:#B2F52F;color:#0A0C09;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center">E</span>
+      <span style="flex:1;min-width:0">
+        <span style="display:block;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">eduardozamai@gmail.com</span>
+        <span style="display:block;margin-top:2px;font-size:12px;font-weight:500;color:var(--muted)">Administrador da plataforma</span>
+      </span>
+      <button type="button" onClick="{{ closeAccount }}" aria-label="Fechar conta" style="width:34px;height:34px;border-radius:11px;border:none;background:var(--field);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style="font-size:12px;font-weight:600;color:var(--muted)">Tema</span>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:16px;background:var(--field)">
+        <sc-for list="{{ themeOptions }}" as="opt" hint-placeholder-count="3">
+          <button type="button" onClick="{{ opt.onClick }}" style="{{ opt.style }}">{{ opt.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="height:1px;background:var(--line)"></div>
+    <button type="button" onClick="{{ signOut }}" style="height:46px;border-radius:14px;border:none;background:transparent;padding:0 10px;display:flex;align-items:center;gap:10px;color:var(--dangerT);font:600 14px 'Plus Jakarta Sans',sans-serif;cursor:pointer" style-hover="background:var(--dangerS);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>Sair
+    </button>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Console mobile" style="position:absolute;inset:0;background:var(--panel);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-variant-numeric:tabular-nums;transition:background-color .35s">
+  <div ref="{{ mScrollRef }}" class="tv-noscroll" style="position:absolute;inset:0;overflow-y:auto;overflow-x:hidden">
+    <div style="box-sizing:border-box;padding:18px 18px 118px;display:flex;flex-direction:column;gap:14px">
+      <sc-if value="{{ mIsList }}" hint-placeholder-val="{{ true }}">
+        <div style="{{ enter0 }}">
+          <div style="position:relative;height:226px">
+            <div style="{{ mHeroClip }}">
+              <img src="assets/tavvi-brandmark.png" alt="" style="position:absolute;right:62px;bottom:-78px;width:230px;height:230px;object-fit:contain;opacity:0.2;transform:rotate(-8deg)">
+            </div>
+            <div style="position:absolute;inset:0;box-sizing:border-box;padding:20px 20px 18px;display:flex;flex-direction:column;justify-content:space-between">
+              <span style="height:26px;align-self:flex-start;display:flex;align-items:center;gap:8px;padding:0 11px 0 10px;border-radius:13px;background:rgba(178,245,47,0.10)">
+                <span style="width:6px;height:6px;border-radius:3px;background:#B2F52F;box-shadow:0 0 0 3px rgba(178,245,47,0.2)"></span>
+                <span style="font-size:11.5px;font-weight:600;color:#C9F870">Plataforma</span>
+              </span>
+              <div style="display:flex;flex-direction:column;gap:8px;max-width:280px">
+                <span style="font-size:31px;line-height:34px;font-weight:800;letter-spacing:-1.1px;color:#F4F6F0">{{ heroTitle }}<span style="color:#B2F52F">.</span></span>
+                <span style="font-size:13px;line-height:19px;font-weight:500;color:#A9AEA3">{{ mHeroDesc }}</span>
+              </div>
+              <div style="min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+                <span style="font-size:13px;font-weight:600;color:#A9AEA3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ heroSummary }}</span>
+                <sc-if value="{{ isConvites }}" hint-placeholder-val="{{ true }}">
+                  <button type="button" onClick="{{ openCreateNew }}" style="height:46px;flex-shrink:0;border:none;border-radius:16px;background:#B2F52F;color:#0A0C09;padding:0 18px 0 14px;display:flex;align-items:center;gap:8px;cursor:pointer;font:600 14px 'Plus Jakarta Sans',sans-serif;box-shadow:0 12px 28px -12px rgba(178,245,47,0.6)" style-active="transform:scale(0.97);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Novo convite
+                  </button>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="{{ enter1 }}">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <label style="height:54px;box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:0 18px;border-radius:17px;background:var(--surface);border:1px solid var(--line);color:var(--muted)">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+              <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="{{ searchPlaceholder }}" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font:500 15px 'Plus Jakarta Sans',sans-serif;color:var(--text)">
+            </label>
+            <sc-if value="{{ isConvites }}" hint-placeholder-val="{{ true }}">
+              <div class="tv-noscroll" style="display:flex;gap:8px;overflow-x:auto;margin:0 -18px;padding:0 18px">
+                <sc-for list="{{ chips }}" as="chip" hint-placeholder-count="5">
+                  <button type="button" onClick="{{ chip.onClick }}" style="{{ chip.mStyle }}"><span>{{ chip.label }}</span><span style="{{ chip.countStyle }}">{{ chip.count }}</span></button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+        <div style="{{ enter2 }}">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-if value="{{ isConvites }}" hint-placeholder-val="{{ true }}">
+              <sc-for list="{{ inviteRows }}" as="row" hint-placeholder-count="2">
+                <button type="button" onClick="{{ row.onOpen }}" style="min-height:76px;box-sizing:border-box;border-radius:22px;background:var(--surface);border:1px solid var(--line);padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;font-family:inherit;text-align:left;transition:transform .12s" style-active="transform:scale(0.985);">
+                  <span style="width:44px;height:44px;flex-shrink:0;border-radius:14px;background:var(--field);color:var(--muted);display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg></span>
+                  <span style="flex:1;min-width:0">
+                    <span style="display:block;font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ row.title }}</span>
+                    <span style="display:block;margin-top:3px;font-size:12.5px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ row.meta }}</span>
+                  </span>
+                  <span style="{{ row.badgeStyle }}">{{ row.statusLabel }}</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="2" stroke-linecap="round" style="flex-shrink:0"><path d="m9 18 6-6-6-6"></path></svg>
+                </button>
+              </sc-for>
+              <sc-if value="{{ noFilteredInvites }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:28px 16px;text-align:center;font-size:13.5px;font-weight:500;color:var(--muted)">{{ emptyFilterText }}</div>
+              </sc-if>
+              <sc-if value="{{ showInviteEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="border-radius:22px;background:var(--surface);border:1px solid var(--line);padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+                  <span style="width:52px;height:52px;border-radius:17px;background:var(--accentS);color:var(--accent);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg></span>
+                  <span style="font-size:17px;font-weight:700;color:var(--text)">Nenhum convite ainda</span>
+                  <span style="font-size:13px;line-height:19px;font-weight:500;color:var(--muted)">Emita o primeiro. Quem receber cria a conta, cria o restaurante e já entra como administrador dele.</span>
+                </div>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ isRestaurantes }}" hint-placeholder-val="{{ false }}">
+              <sc-for list="{{ restaurantRows }}" as="r" hint-placeholder-count="1">
+                <button type="button" onClick="{{ r.onOpen }}" style="min-height:84px;box-sizing:border-box;border-radius:22px;background:var(--surface);border:1px solid var(--line);padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;font-family:inherit;text-align:left" style-active="transform:scale(0.985);">
+                  <span style="width:52px;height:52px;flex-shrink:0;border-radius:16px;background:var(--accentS);color:var(--accent);font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center">{{ r.initials }}</span>
+                  <span style="flex:1;min-width:0">
+                    <span style="display:block;font-size:15px;font-weight:600;color:var(--text)">{{ r.name }}</span>
+                    <span style="display:block;margin-top:3px;font-size:12.5px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">/{{ r.slug }} · {{ r.type }}</span>
+                  </span>
+                  <span style="{{ r.badgeStyle }}">{{ r.statusLabel }}</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="2" stroke-linecap="round" style="flex-shrink:0"><path d="m9 18 6-6-6-6"></path></svg>
+                </button>
+              </sc-for>
+              <sc-if value="{{ noRestaurants }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:28px 16px;text-align:center;font-size:13.5px;font-weight:500;color:var(--muted)">{{ emptyRestText }}</div>
+              </sc-if>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ mIsDetail }}" hint-placeholder-val="{{ false }}">
+        <div style="{{ enter0 }}">
+          <div style="position:relative;height:48px;display:flex;align-items:center">
+            <button type="button" onClick="{{ mBack }}" aria-label="Voltar" style="width:48px;height:48px;border-radius:16px;border:1px solid var(--line);background:var(--surface);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+            <span style="position:absolute;left:56px;right:56px;text-align:center;font-size:14px;font-weight:600;color:var(--text)">{{ mDetailTitle }}</span>
+          </div>
+        </div>
+        <div style="{{ enter1 }}">
+          <sc-if value="{{ mIsInvite }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ hasInviteVm }}" hint-placeholder-val="{{ false }}">
+              <dc-import name="Tavvi Invite Detail" vm="{{ inviteVm }}" hint-size="100%,560px"></dc-import>
+            </sc-if>
+          </sc-if>
+          <sc-if value="{{ mIsRest }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ hasRestVm }}" hint-placeholder-val="{{ false }}">
+              <dc-import name="Tavvi Restaurant Detail" vm="{{ restVm }}" hint-size="100%,900px"></dc-import>
+            </sc-if>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <div onClick="{{ closeMPanel }}" style="{{ mScrim }}"></div>
+
+  <div style="{{ mAccountStyle }}">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="width:44px;height:44px;flex-shrink:0;border-radius:15px;background:#B2F52F;color:#0A0C09;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center">E</span>
+      <span style="flex:1;min-width:0">
+        <span style="display:block;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">eduardozamai@gmail.com</span>
+        <span style="display:block;margin-top:2px;font-size:12px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Administrador da plataforma</span>
+      </span>
+      <button type="button" onClick="{{ closeMPanel }}" aria-label="Fechar conta" style="width:34px;height:34px;flex-shrink:0;border-radius:11px;border:none;background:var(--field);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+    </div>
+    <div style="min-height:54px;display:flex;align-items:center;justify-content:space-between">
+      <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:600;color:var(--muted)">Tema</span><span style="font-size:12px;font-weight:500;color:var(--subtle)">{{ themeName }}</span></span>
+      <button type="button" onClick="{{ cycleTheme }}" aria-label="Alternar tema" style="width:54px;height:54px;border-radius:19px;border:1px solid var(--line2);background:transparent;color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer" style-active="transform:scale(0.94);">
+        <sc-if value="{{ prefSystem }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg></sc-if>
+        <sc-if value="{{ prefLight }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41-1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></sc-if>
+        <sc-if value="{{ prefDark }}" hint-placeholder-val="{{ true }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></sc-if>
+      </button>
+    </div>
+    <div style="height:1px;background:var(--line)"></div>
+    <button type="button" onClick="{{ signOut }}" style="height:46px;border-radius:14px;border:none;background:transparent;padding:0 10px;display:flex;align-items:center;gap:10px;color:var(--dangerT);font:600 14px 'Plus Jakarta Sans',sans-serif;cursor:pointer" style-active="background:var(--dangerS);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>Sair
+    </button>
+  </div>
+
+  <div style="{{ mMenuStyle }}">
+    <span style="padding:10px 12px 6px;font-size:11px;font-weight:700;letter-spacing:0.12em;color:var(--subtle)">NAVEGAÇÃO</span>
+    <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="2">
+      <button type="button" onClick="{{ item.onClick }}" style="{{ item.flyRowStyle }}">
+        <span style="{{ item.flyTileStyle }}">
+          <sc-if value="{{ item.isMail }}" hint-placeholder-val="{{ true }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg></sc-if>
+          <sc-if value="{{ item.isStore }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"></path><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"></path><path d="M2 7h20"></path><path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"></path></svg></sc-if>
+        </span>
+        <span style="flex:1;min-width:0;text-align:left">
+          <span style="display:block;font-size:15px;font-weight:600;color:var(--text)">{{ item.label }}</span>
+          <span style="display:block;margin-top:2px;font-size:12.5px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ item.sub }}</span>
+        </span>
+        <span style="font-size:12.5px;font-weight:500;color:var(--subtle);white-space:nowrap">{{ item.count }}</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"></path></svg>
+      </button>
+    </sc-for>
+  </div>
+
+  <nav aria-label="Navegação" style="position:absolute;left:22px;right:22px;bottom:22px;height:64px;box-sizing:border-box;border-radius:32px;border:1px solid rgba(244,246,240,0.10);background:#121510;padding:0 8px;display:flex;align-items:center;justify-content:space-between;z-index:40;box-shadow:0 20px 40px -16px rgba(0,0,0,0.7)">
+    <button type="button" onClick="{{ toggleMAccount }}" aria-label="Conta" style="{{ mAccountBtn }}"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"></circle><path d="M20 21a8 8 0 0 0-16 0"></path></svg></button>
+    <button type="button" onClick="{{ mHome }}" aria-label="Início" style="height:48px;border:none;border-radius:24px;background:#B2F52F;color:#0A0C09;padding:0 22px 0 18px;display:flex;align-items:center;gap:8px;cursor:pointer;font:600 15px 'Plus Jakarta Sans',sans-serif" style-active="transform:scale(0.97);background:#BEF94A;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Início
+    </button>
+    <button type="button" onClick="{{ toggleMMenu }}" aria-label="Menu" style="{{ mMenuBtn }}"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 12h16"></path><path d="M4 6h16"></path><path d="M4 18h16"></path></svg></button>
+  </nav>
+
+  <div onClick="{{ closeSheet }}" style="{{ mSheetScrim }}"></div>
+  <section aria-label="Novo convite" style="{{ mSheetStyle }}">
+    <div style="width:40px;height:5px;border-radius:3px;background:var(--line2);align-self:center;margin-bottom:12px"></div>
+    <div class="tv-noscroll" style="overflow:auto">
+      <dc-import name="Tavvi Invite Form" vm="{{ formVm }}" hint-size="100%,520px"></dc-import>
+    </div>
+  </section>
+</div>
+</sc-if>
+
+<div onClick="{{ cancelDialog }}" style="{{ dialogScrim }}"></div>
+<div role="alertdialog" aria-modal="true" style="{{ dialogStyle }}">
+  <span style="{{ dialogTileStyle }}">
+    <sc-if value="{{ dialogIsTrash }}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></sc-if>
+    <sc-if value="{{ dialogIsBan }}" hint-placeholder-val="{{ true }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></svg></sc-if>
+  </span>
+  <span style="font-size:20px;line-height:25px;font-weight:700;letter-spacing:-0.4px;color:var(--text)">{{ dialogTitle }}</span>
+  <span style="font-size:13.5px;line-height:20px;font-weight:500;color:var(--muted)">{{ dialogDesc }}</span>
+  <div style="display:flex;gap:10px;margin-top:10px">
+    <button type="button" onClick="{{ cancelDialog }}" style="flex:1;height:50px;border-radius:16px;border:1px solid var(--line2);background:var(--field);color:var(--text);font:600 14px 'Plus Jakarta Sans',sans-serif;cursor:pointer">{{ dialogCancel }}</button>
+    <button type="button" onClick="{{ confirmDialog }}" style="flex:1;height:50px;border-radius:16px;border:none;background:var(--dangerT);color:var(--surface);font:700 14px 'Plus Jakarta Sans',sans-serif;cursor:pointer" style-hover="opacity:0.9;">{{ dialogConfirm }}</button>
+  </div>
+</div>
+
+<sc-if value="{{ paletteOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closePalette }}" style="position:absolute;inset:0;z-index:58;background:var(--scrim)"></div>
+  <div role="dialog" aria-label="Buscar página" style="position:absolute;left:50%;top:14%;transform:translateX(-50%);width:min(560px, calc(100% - 32px));z-index:60;box-sizing:border-box;border-radius:24px;background:var(--glass);backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2);border:1px solid var(--line2);box-shadow:var(--shadow);padding:8px;font-family:'Plus Jakarta Sans',sans-serif">
+    <label style="height:56px;display:flex;align-items:center;gap:12px;padding:0 14px;border-bottom:1px solid var(--line);color:var(--muted)">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <input autoFocus="{{ true }}" value="{{ pq }}" onChange="{{ onPq }}" onKeyDown="{{ onPaletteKey }}" placeholder="Buscar página ou ação" style="flex:1;border:none;outline:none;background:transparent;font:500 15px 'Plus Jakarta Sans',sans-serif;color:var(--text)">
+      <span style="font:500 10.5px 'JetBrains Mono',monospace;color:var(--subtle);padding:2px 6px;border-radius:5px;border:1px solid var(--line)">Esc</span>
+    </label>
+    <div style="display:flex;flex-direction:column;gap:2px;padding-top:6px">
+      <sc-for list="{{ paletteItems }}" as="pi" hint-placeholder-count="4">
+        <button type="button" onClick="{{ pi.onClick }}" style="{{ pi.style }}" style-hover="background:var(--field);">
+          <span style="font-size:14px;font-weight:600;color:var(--text)">{{ pi.label }}</span>
+          <span style="font-size:12px;font-weight:500;color:var(--subtle)">{{ pi.sub }}</span>
+        </button>
+      </sc-for>
+      <sc-if value="{{ paletteEmpty }}" hint-placeholder-val="{{ false }}"><span style="padding:18px 14px;font-size:13px;font-weight:500;color:var(--muted)">Nada encontrado.</span></sc-if>
+    </div>
+  </div>
+</sc-if>
+
+<div role="status" style="{{ toastStyle }}">
+  <span style="width:24px;height:24px;border-radius:8px;background:#B2F52F;color:#0A0C09;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+  <span>{{ toastText }}</span>
+</div>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;,&quot;system&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;viewport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;desktop&quot;,&quot;mobile&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;pinned&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;dataset&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;real&quot;,&quot;vazio&quot;],&quot;default&quot;:&quot;real&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;gooey&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:0,&quot;max&quot;:2,&quot;step&quot;:0.1,&quot;default&quot;:1,&quot;tsType&quot;:&quot;number&quot;},&quot;motion&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;on&quot;,&quot;off&quot;],&quot;default&quot;:&quot;on&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const THEMES = {
+  dark: { '--backdrop': '#050604', '--rail': '#151812', '--panel': '#0A0C09', '--surface': '#11130F', '--field': '#1A1D17', '--text': '#F4F6F0', '--muted': '#A9AEA3', '--subtle': '#7D8278', '--line': 'rgba(244,246,240,0.08)', '--line2': 'rgba(244,246,240,0.14)', '--accent': '#B2F52F', '--accentS': 'rgba(178,245,47,0.12)', '--okT': '#79C77C', '--okS': '#1A2F1B', '--warnT': '#E7AF5C', '--warnS': '#382810', '--neuT': '#A9AEA3', '--neuS': 'rgba(244,246,240,0.07)', '--dangerT': '#FF8A84', '--dangerS': '#3A1715', '--shadow': '0 24px 48px -18px rgba(0,0,0,0.75)', '--hover': 'rgba(244,246,240,0.035)', '--hover2': 'rgba(244,246,240,0.06)', '--glass': 'rgba(20,23,18,0.86)', '--scrim': 'rgba(0,0,0,0.55)' },
+  light: { '--backdrop': '#C9CDBF', '--rail': '#DEE2D5', '--panel': '#EEF0E8', '--surface': '#FFFFFF', '--field': '#F2F4ED', '--text': '#11150F', '--muted': '#62675E', '--subtle': '#6B7167', '--line': 'rgba(10,12,9,0.09)', '--line2': 'rgba(10,12,9,0.16)', '--accent': '#557D00', '--accentS': 'rgba(85,125,0,0.12)', '--okT': '#267D30', '--okS': '#DFF6DE', '--warnT': '#A06700', '--warnS': '#FFF0CC', '--neuT': '#62675E', '--neuS': 'rgba(10,12,9,0.06)', '--dangerT': '#B42318', '--dangerS': '#FEE4E2', '--shadow': '0 24px 48px -18px rgba(30,40,20,0.30)', '--hover': 'rgba(10,12,9,0.025)', '--hover2': 'rgba(10,12,9,0.05)', '--glass': 'rgba(255,255,255,0.9)', '--scrim': 'rgba(10,12,9,0.32)' },
+};
+const M = 12, R = 28, RAIL = 88, RAIL_PIN = 272, HALF = 28, FILLET = 18, DAY = 86400000, DOMAIN = 'tavvi.app';
+const at = (m, d, h = 12, mi = 0) => new Date(2026, m - 1, d, h, mi).getTime();
+const NOW = at(9, 23, 19, 20);
+const fmt = (t) => new Date(t).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' });
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const EASE = 'cubic-bezier(0.16,1,0.3,1)';
+const NAV = [
+  { key: 'convites', label: 'Convites', sub: 'Acessos de administrador', cy: 196, icon: 'mail' },
+  { key: 'restaurantes', label: 'Restaurantes', sub: 'Estabelecimentos da plataforma', cy: 260, icon: 'store' },
+];
+const SEED_INVITES = [
+  { id: 'inv-a', email: 'eduardozamai@gmail.com', createdAt: at(9, 22, 10), expiresAt: at(9, 29, 10), revokedAt: at(9, 22, 15), redeemedAt: null, createdBy: 'eduardozamai@gmail.com' },
+  { id: 'inv-b', email: 'dev.rankup@gmail.com', createdAt: at(9, 18, 9), expiresAt: at(9, 25, 9), redeemedAt: at(9, 18, 11), redeemedBy: 'dev.rankup@gmail.com', revokedAt: null, createdBy: 'eduardozamai@gmail.com' },
+];
+const SEED_REST = [{ id: 'r-cz', name: 'Cantina do Zé', slug: 'cantina-do-ze', type: 'Cantina italiana', status: 'active', createdAt: at(9, 18, 11), updatedAt: at(9, 18, 11) }];
+const STATUS = { pendente: ['Pendente', 'accent'], resgatado: ['Resgatado', 'ok'], vencido: ['Vencido', 'warn'], revogado: ['Revogado', 'neu'] };
+const REST_STATUS = { draft: ['Rascunho', 'neu'], active: ['Ativo', 'ok'], suspended: ['Suspenso', 'warn'] };
+const TONE = { accent: ['var(--accent)', 'var(--accentS)'], ok: ['var(--okT)', 'var(--okS)'], warn: ['var(--warnT)', 'var(--warnS)'], neu: ['var(--neuT)', 'var(--neuS)'], danger: ['var(--dangerT)', 'var(--dangerS)'] };
+const HERO_TONE = { accent: '#B2F52F', ok: '#79C77C', warn: '#E7AF5C', neu: '#A9AEA3', danger: '#FF8A84' };
+const FILTERS = [['todos', 'Todos'], ['pendente', 'Pendentes'], ['resgatado', 'Resgatados'], ['vencido', 'Vencidos'], ['revogado', 'Revogados']];
+const stOf = (i) => (i.revokedAt ? 'revogado' : i.redeemedAt ? 'resgatado' : i.expiresAt < NOW ? 'vencido' : 'pendente');
+const metaOf = (i) => ({ pendente: `Válido até ${fmt(i.expiresAt)}`, resgatado: `Resgatado em ${fmt(i.redeemedAt)}`, revogado: `Revogado em ${fmt(i.revokedAt)}`, vencido: `Venceu em ${fmt(i.expiresAt)}` })[stOf(i)];
+const initials = (n) => n.trim().split(/\s+/).filter((w) => w.length > 2 || /^[A-ZÀ-Ú]/.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || 'R';
+const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
+const badge = (tone) => ({ height: 26, flexShrink: 0, display: 'inline-flex', alignItems: 'center', padding: '0 10px', borderRadius: 12, background: TONE[tone][1], color: TONE[tone][0], fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' });
+const heroBadge = (tone) => ({ height: 26, display: 'inline-flex', alignItems: 'center', padding: '0 11px', borderRadius: 13, background: 'rgba(244,246,240,0.08)', color: HERO_TONE[tone], fontSize: 12, fontWeight: 600 });
+const infoRow = (i) => ({ minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTop: i ? '1px solid var(--line)' : 'none' });
+const cta = (dis) => ({ height: 58, border: 'none', borderRadius: 20, background: '#B2F52F', color: '#0A0C09', padding: '0 7px 0 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: dis ? 'not-allowed' : 'pointer', font: "700 14px 'Plus Jakarta Sans',sans-serif", opacity: dis ? 0.5 : 1, boxShadow: dis ? 'none' : '0 14px 34px -16px rgba(178,245,47,0.6)', transition: 'background-color .2s, opacity .2s, box-shadow .2s' });
+
+function notched(w, h, radius, nw, nh, curve) {
+  const nx = w - nw, c = curve * 0.45;
+  return `M ${radius} 0 H ${nx - curve} C ${nx - c} 0 ${nx} ${c} ${nx} ${curve} V ${nh - curve} C ${nx} ${nh - c} ${nx + c} ${nh} ${nx + curve} ${nh} H ${w - radius} C ${w - 12} ${nh} ${w} ${nh + 12} ${w} ${nh + radius} V ${h - radius} C ${w} ${h - 12} ${w - 12} ${h} ${w - radius} ${h} H ${radius} C 12 ${h} 0 ${h - 12} 0 ${h - radius} V ${radius} C 0 12 12 0 ${radius} 0 Z`;
+}
+
+class Component extends DCLogic {
+  _pt = this.props.theme; _pp = this.props.pinned; _pd = this.props.dataset;
+  state = {
+    page: 'convites', view: 'convites', pinned: !!this.props.pinned, pref: this.props.theme ?? 'dark',
+    flyout: false, account: false, palette: false, pq: '', filter: 'todos', query: '', hover: null, fade: true,
+    invites: this.props.dataset === 'vazio' ? [] : SEED_INVITES, restaurants: SEED_REST,
+    detail: null, rdetail: null, sheet: false, form: { email: '', days: 7, rotateId: null, error: null, focus: false }, created: null, pending: false,
+    dialog: null, mPanel: 'none', mRoute: 'list', slugDraft: '', pubCopied: false, toast: '', toastOn: false, dims: { w: window.innerWidth, h: window.innerHeight },
+  };
+  rootRef = React.createRef(); pathRef = React.createRef(); railRef = React.createRef(); contentRef = React.createRef(); heroRef = React.createRef(); mScrollRef = React.createRef();
+  sim = null; seq = 0;
+
+  set = (o) => this.setState(o);
+  lay() {
+    const { w, h } = this.state.dims, vp = this.props.viewport ?? 'auto';
+    if (vp === 'mobile' || (vp === 'auto' && w < 860)) {
+      if (w > 600) return { mobile: true, W: 390, H: 844, s: Math.min(1, (h - 40) / 844), framed: true };
+      return { mobile: true, W: w, H: h, s: 1, framed: false };
+    }
+    if (vp === 'desktop' && (w < 1200 || h < 720)) return { mobile: false, W: 1440, H: 900, s: Math.min(w / 1440, h / 900), framed: true };
+    return { mobile: false, W: w, H: h, s: 1, framed: false };
+  }
+  target() { return { cy: (NAV.find((n) => n.key === this.state.page) || NAV[0]).cy, L: this.state.pinned ? RAIL_PIN : RAIL }; }
+  pocketPath(L, cy, aT, aB, D) {
+    const { W, H } = this._lay || this.lay();
+    const T = M, B = H - M, Rt = W - M, k = 0.45, f = FILLET, x0 = L - D, r = Math.min(24, aT, aB);
+    return [`M ${L + R} ${T}`, `H ${Rt - R}`, `C ${Rt - R * k} ${T} ${Rt} ${T + R * k} ${Rt} ${T + R}`, `V ${B - R}`, `C ${Rt} ${B - R * k} ${Rt - R * k} ${B} ${Rt - R} ${B}`,
+      `H ${L + R}`, `C ${L + R * k} ${B} ${L} ${B - R * k} ${L} ${B - R}`, `V ${cy + aB + f}`, `C ${L} ${cy + aB + f * k} ${L - f * k} ${cy + aB} ${L - f} ${cy + aB}`,
+      `H ${x0 + r}`, `C ${x0 + r * k} ${cy + aB} ${x0} ${cy + aB - r * k} ${x0} ${cy + aB - r}`, `V ${cy - aT + r}`, `C ${x0} ${cy - aT + r * k} ${x0 + r * k} ${cy - aT} ${x0 + r} ${cy - aT}`,
+      `H ${L - f}`, `C ${L - f * k} ${cy - aT} ${L} ${cy - aT - f * k} ${L} ${cy - aT - f}`, `V ${T + R}`, `C ${L} ${T + R * k} ${L + R * k} ${T} ${L + R} ${T}`, 'Z'].join(' ');
+  }
+  currentPath() {
+    const p = this.sim || { ...this.target(), v: 0 }, g = this.props.gooey ?? 1, v = p.v || 0;
+    return this.pocketPath(p.L, p.cy, HALF + clamp(v * 0.05 * g, 0, 34), HALF + clamp(-v * 0.05 * g, 0, 34), p.L - M - clamp(Math.abs(v) * 0.035 * g, 0, 24));
+  }
+  heroClip() {
+    const el = this.heroRef.current;
+    if (!el || !el.offsetWidth) return;
+    const conv = this.state.view === 'convites';
+    el.style.clipPath = `path('${notched(el.offsetWidth, el.offsetHeight, 30, conv ? 212 : 76, 72, 22)}')`;
+    if (this._obs !== el && this.ro) { this.ro.disconnect(); this.ro.observe(el); this._obs = el; }
+  }
+  apply() {
+    const p = this.sim; if (!p) return;
+    if (this.pathRef.current) this.pathRef.current.setAttribute('d', this.currentPath());
+    if (this.railRef.current) this.railRef.current.style.width = p.L + 'px';
+    if (this.contentRef.current) this.contentRef.current.style.left = p.L + 'px';
+    this.heroClip();
+  }
+  tick = () => {
+    const p = this.sim, t = this.target(), now = performance.now();
+    let el = Math.min(0.05, (now - this.last) / 1000); this.last = now;
+    while (el > 0) { const dt = Math.min(el, 1 / 120); el -= dt;
+      p.v += (-190 * (p.cy - t.cy) - 15.5 * p.v) * dt; p.cy += p.v * dt;
+      p.vL += (-320 * (p.L - t.L) - 35 * p.vL) * dt; p.L += p.vL * dt; }
+    const done = Math.abs(p.cy - t.cy) < 0.2 && Math.abs(p.v) < 0.8 && Math.abs(p.L - t.L) < 0.2 && Math.abs(p.vL) < 0.8;
+    if (done) Object.assign(p, t, { v: 0, vL: 0 });
+    this.apply();
+    this.raf = done ? null : requestAnimationFrame(this.tick);
+  };
+  kick() {
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced || this.props.motion === 'off') { cancelAnimationFrame(this.raf); this.raf = null; Object.assign(this.sim, this.target(), { v: 0, vL: 0 }); this.apply(); return; }
+    if (!this.raf) { this.last = performance.now() - 16; this.raf = requestAnimationFrame(this.tick); }
+  }
+  sync() {
+    const lay = this._lay; if (!lay) return;
+    const t = this.target();
+    if (!this.sim) this.sim = { ...t, v: 0, vL: 0 };
+    const mk = `${lay.mobile}|${lay.W}|${lay.H}`, g = this.state.page + '|' + this.state.pinned;
+    if (mk !== this._mk) { this._mk = mk; this._geo = g; cancelAnimationFrame(this.raf); this.raf = null; Object.assign(this.sim, t, { v: 0, vL: 0 }); }
+    if (g !== this._geo) { this._geo = g; if (!lay.mobile) this.kick(); else Object.assign(this.sim, t, { v: 0, vL: 0 }); }
+    const rk = this.state.view + '|' + this.state.mRoute;
+    if (rk !== this._rk) { this._rk = rk; if (this.mScrollRef.current) this.mScrollRef.current.scrollTop = 0; }
+    if (!this.raf) this.apply();
+  }
+  componentDidMount() {
+    const measure = () => { const r = this.rootRef.current; const w = r ? r.clientWidth : window.innerWidth, h = r ? r.clientHeight : window.innerHeight; if (w !== this.state.dims.w || h !== this.state.dims.h) this.set({ dims: { w, h } }); };
+    measure(); this.onResize = measure; window.addEventListener('resize', measure);
+    this.ro = new ResizeObserver(() => this.heroClip());
+    this.enterT = setTimeout(() => this.set({ fade: false }), 80);
+    this.onKey = (e) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.code === 'KeyB' && !this._lay.mobile) { e.preventDefault(); this.togglePinned(); }
+      else if (mod && e.code === 'KeyK') { e.preventDefault(); this.set({ palette: !this.state.palette, pq: '' }); }
+      else if (e.key === 'Escape') this.escape();
+    };
+    window.addEventListener('keydown', this.onKey);
+  }
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this.onKey); window.removeEventListener('resize', this.onResize);
+    cancelAnimationFrame(this.raf); cancelAnimationFrame(this._sq); this.ro && this.ro.disconnect();
+    [this.ft, this.tt, this.fadeT, this.subT, this.enterT, this.clrT, this.pubT].forEach(clearTimeout);
+  }
+  escape() {
+    const s = this.state;
+    if (s.dialog) return this.cancelDialog();
+    if (s.palette) return this.set({ palette: false });
+    if (s.sheet) return this.closeSheet();
+    if (s.detail || s.rdetail) return this.set({ detail: null, rdetail: null });
+    this.set({ account: false, flyout: false, mPanel: 'none' });
+  }
+  flash(text) { clearTimeout(this.tt); this.set({ toast: text, toastOn: true }); this.tt = setTimeout(() => this.set({ toastOn: false }), 2000); }
+  swap(now, later) {
+    this.set({ ...now, fade: true });
+    clearTimeout(this.fadeT);
+    this.fadeT = setTimeout(() => this.set({ ...later, fade: false }), 150);
+  }
+  togglePinned = () => this.set({ pinned: !this.state.pinned, flyout: false });
+  go(key) {
+    const mobile = this._lay.mobile;
+    if (key === this.state.view && (!mobile || this.state.mRoute === 'list')) { this.set({ flyout: false, mPanel: 'none', palette: false }); return; }
+    this.swap({ page: key, flyout: false, hover: null, detail: null, rdetail: null, mPanel: 'none', palette: false }, { view: key, mRoute: 'list', query: '', filter: 'todos' });
+  }
+  openInvite(id) {
+    if (this._lay.mobile) this.swap({ mPanel: 'none' }, { mRoute: 'invite', detail: id });
+    else this.set({ detail: id, rdetail: null, hover: null });
+  }
+  openRest(id) {
+    const r = this.state.restaurants.find((x) => x.id === id);
+    if (this._lay.mobile) this.swap({ mPanel: 'none' }, { mRoute: 'restaurant', rdetail: id, slugDraft: r.slug, pubCopied: false });
+    else this.set({ rdetail: id, detail: null, slugDraft: r.slug, pubCopied: false, hover: null });
+  }
+  openCreate(fromId) {
+    const src = fromId && this.state.invites.find((i) => i.id === fromId);
+    const pend = src && stOf(src) === 'pendente';
+    const days = pend ? clamp(Math.ceil((src.expiresAt - NOW) / DAY), 1, 30) : 7;
+    clearTimeout(this.clrT);
+    this.set({ sheet: true, created: null, pending: false, form: { email: (src && src.email) || '', days, rotateId: pend ? src.id : null, error: null, focus: false }, mPanel: 'none', palette: false });
+  }
+  closeSheet = () => {
+    const c = this.state.created;
+    if (c && !c.copied) { this.set({ dialog: { kind: 'discard' } }); return; }
+    this.set({ sheet: false }); clearTimeout(this.clrT); this.clrT = setTimeout(() => this.set({ created: null }), 360);
+  };
+  submit = () => {
+    const f = this.state.form, em = f.email.trim();
+    if (em && !/^\S+@\S+\.\S+$/.test(em)) { this.set({ form: { ...f, error: 'Informe um e-mail válido ou deixe o campo vazio.' } }); return; }
+    this.set({ pending: true });
+    this.subT = setTimeout(() => {
+      const createdAt = NOW + ++this.seq * 60000, id = 'inv-' + Math.random().toString(36).slice(2, 8);
+      const token = Array.from({ length: 32 }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]).join('');
+      const inv = { id, email: em || null, createdAt, expiresAt: createdAt + f.days * DAY, revokedAt: null, redeemedAt: null, createdBy: 'eduardozamai@gmail.com', rotatedFrom: f.rotateId };
+      const list = this.state.invites.map((i) => (i.id === f.rotateId ? { ...i, revokedAt: createdAt, rotated: true } : i));
+      this.set({ invites: [inv, ...list], pending: false, created: { id, link: `https://${DOMAIN}/painel/convite/${token}`, copied: false }, detail: this.state.detail && f.rotateId ? id : this.state.detail, filter: 'todos' });
+    }, 750);
+  };
+  cancelDialog = () => this.set({ dialog: null });
+  confirmDialog = () => {
+    const d = this.state.dialog; if (!d) return;
+    if (d.kind === 'revoke') { this.set({ dialog: null, invites: this.state.invites.map((i) => (i.id === d.id ? { ...i, revokedAt: NOW + ++this.seq * 60000 } : i)) }); this.flash('Convite revogado'); }
+    else if (d.kind === 'remove') { this.set({ dialog: null, rdetail: null, restaurants: this.state.restaurants.filter((r) => r.id !== d.id) }); if (this._lay.mobile) this.swap({}, { mRoute: 'list' }); this.flash('Restaurante removido'); }
+    else { this.set({ dialog: null, sheet: false }); clearTimeout(this.clrT); this.clrT = setTimeout(() => this.set({ created: null }), 360); }
+  };
+  updRest(id, patch, msg) { this.set({ restaurants: this.state.restaurants.map((r) => (r.id === id ? { ...r, ...patch, updatedAt: NOW + ++this.seq * 60000 } : r)) }); this.flash(msg); }
+
+  inviteVm(inv) {
+    const st = stOf(inv), [label, tone] = STATUS[st];
+    const ev = (title, meta, t) => ({ title, meta, haloStyle: { width: 18, height: 18, flexShrink: 0, borderRadius: 9, background: TONE[t][1], display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 1 }, dotStyle: { width: 10, height: 10, borderRadius: 5, background: TONE[t][0] } });
+    const events = [ev('Criado', `${fmt(inv.createdAt)} · por ${inv.createdBy}`, 'neu')];
+    if (st === 'resgatado') events.push(ev('Resgatado', `${fmt(inv.redeemedAt)} · ${inv.redeemedBy || inv.email || 'Administrador'}`, 'ok'));
+    if (st === 'revogado') events.push(ev('Revogado', inv.rotated ? `${fmt(inv.revokedAt)} · substituído por um novo link` : fmt(inv.revokedAt), 'danger'));
+    if (st === 'vencido') events.push(ev('Venceu', fmt(inv.expiresAt), 'warn'));
+    if (st === 'pendente') events.push(ev('Aguardando resgate', `Válido até ${fmt(inv.expiresAt)}`, 'accent'));
+    return {
+      title: inv.email || 'Qualquer e-mail', statusLabel: label, heroBadgeStyle: heroBadge(tone), meta: metaOf(inv),
+      info: [['Criado em', fmt(inv.createdAt)], ['Válido até', fmt(inv.expiresAt)], ['Destinatário', inv.email ? 'E-mail definido' : 'Qualquer e-mail']].map(([l, v], i) => ({ label: l, value: v, style: infoRow(i) })),
+      events, isPending: st === 'pendente', notPending: st !== 'pendente',
+      onRotate: () => this.openCreate(inv.id), onNew: () => this.openCreate(inv.id), onRevoke: () => this.set({ dialog: { kind: 'revoke', id: inv.id } }),
+    };
+  }
+  restVm(r) {
+    const [label, tone] = REST_STATUS[r.status], draft = this.state.slugDraft, changed = draft !== r.slug;
+    const err = changed && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(draft) ? 'Use letras minúsculas, números e hífens.' : '';
+    const canSave = changed && !err, copied = this.state.pubCopied;
+    return {
+      initials: initials(r.name), name: r.name, type: r.type, statusLabel: label, heroBadgeStyle: heroBadge(tone),
+      publicUrl: `${DOMAIN}/${r.slug}`, copyLabel: copied ? 'Copiado' : 'Copiar',
+      copyStyle: { height: 40, flexShrink: 0, padding: '0 14px', borderRadius: 13, border: 'none', background: copied ? '#B2F52F' : 'var(--surface)', color: copied ? '#0A0C09' : 'var(--text)', font: "600 13px 'Plus Jakarta Sans',sans-serif", cursor: 'pointer', transition: 'background-color .2s' },
+      onCopy: () => { navigator.clipboard && navigator.clipboard.writeText(`https://${DOMAIN}/${r.slug}`).catch(() => {}); clearTimeout(this.pubT); this.set({ pubCopied: true }); this.pubT = setTimeout(() => this.set({ pubCopied: false }), 1800); },
+      domain: DOMAIN, slugDraft: draft, onSlug: (e) => this.set({ slugDraft: e.target.value.toLowerCase().replace(/\s+/g, '-') }),
+      slugHelp: `O cardápio fica em ${DOMAIN}/${draft || r.slug}. As plaquinhas continuam funcionando depois da troca, porque elas apontam para um código próprio e não para o endereço. Links compartilhados diretamente é que deixam de funcionar.`,
+      slugError: err, slugUnchanged: !canSave,
+      saveStyle: { height: 48, borderRadius: 15, border: canSave ? 'none' : '1px solid var(--line)', background: canSave ? 'var(--text)' : 'var(--field)', color: canSave ? 'var(--panel)' : 'var(--subtle)', font: "600 14px 'Plus Jakarta Sans',sans-serif", cursor: canSave ? 'pointer' : 'not-allowed', transition: 'background-color .2s, color .2s' },
+      onSaveSlug: () => canSave && this.updRest(r.id, { slug: draft }, 'Endereço atualizado'),
+      statusOptions: [['draft', 'Rascunho', 'Invisível para o público'], ['active', 'Ativo', 'Cardápio no ar'], ['suspended', 'Suspenso', 'Cardápio fora do ar']].map(([k, l, d]) => {
+        const on = r.status === k;
+        return { label: l, desc: d, onClick: () => !on && this.updRest(r.id, { status: k }, 'Situação atualizada'),
+          style: { minHeight: 60, boxSizing: 'border-box', borderRadius: 16, border: on ? '1px solid var(--accent)' : '1px solid var(--line)', background: on ? 'var(--accentS)' : 'transparent', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: on ? 'default' : 'pointer', fontFamily: 'inherit', transition: 'background-color .2s, border-color .2s' },
+          radioStyle: { width: 20, height: 20, flexShrink: 0, boxSizing: 'border-box', borderRadius: 10, border: `2px solid ${on ? 'var(--accent)' : 'var(--line2)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+          radioDot: { width: 8, height: 8, borderRadius: 4, background: on ? 'var(--accent)' : 'transparent' } };
+      }),
+      info: [['Criado em', fmt(r.createdAt)], ['Atualizado em', fmt(r.updatedAt)]].map(([l, v], i) => ({ label: l, value: v, style: infoRow(i) })),
+      onRemove: () => this.set({ dialog: { kind: 'remove', id: r.id } }),
+    };
+  }
+  formVm() {
+    const s = this.state, f = s.form, c = s.created;
+    if (c) return {
+      isForm: false, isCreated: true, link: c.link, copyLabel: c.copied ? 'Link copiado' : 'Copiar link', notCopied: !c.copied, finishStyle: cta(!c.copied),
+      copyStyle: { height: 54, borderRadius: 16, border: `1px solid ${c.copied ? 'var(--accent)' : 'var(--line2)'}`, background: 'var(--field)', color: c.copied ? 'var(--accent)' : 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', font: "600 14px 'Plus Jakarta Sans',sans-serif", transition: 'border-color .2s, color .2s' },
+      onCopy: () => { navigator.clipboard && navigator.clipboard.writeText(c.link).catch(() => {}); this.set({ created: { ...c, copied: true } }); },
+      onFinish: () => { if (!c.copied) return; this.set({ sheet: false }); clearTimeout(this.clrT); this.clrT = setTimeout(() => this.set({ created: null }), 360); this.flash('Convite criado'); },
+    };
+    const rot = !!f.rotateId, days = plural(f.days, 'dia', 'dias');
+    const step = (dis) => ({ width: 40, height: 40, borderRadius: 13, border: 'none', background: 'var(--surface)', color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: dis ? 'default' : 'pointer', opacity: dis ? 0.4 : 1 });
+    const setF = (p) => this.set({ form: { ...this.state.form, ...p } });
+    return {
+      isForm: true, isCreated: false, title: rot ? 'Novo link' : 'Novo convite',
+      desc: rot ? 'O link atual deixa de funcionar e um novo é gerado para o mesmo destinatário e prazo.' : 'Crie um acesso de administrador da plataforma.',
+      email: f.email, emailLocked: rot, emailError: f.error || '', emailHint: 'Preenchido, o link só funciona para quem entrar com esse e-mail.',
+      onEmail: (e) => setF({ email: e.target.value, error: null }), onFocus: () => setF({ focus: true }), onBlur: () => setF({ focus: false }),
+      emailFieldStyle: { minHeight: 54, boxSizing: 'border-box', borderRadius: 18, border: `1px solid ${f.error ? 'var(--dangerT)' : f.focus && !rot ? 'var(--accent)' : 'var(--line)'}`, background: 'var(--field)', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: f.focus && !f.error && !rot ? '0 0 0 4px var(--accentS)' : 'none', opacity: rot ? 0.7 : 1, transition: 'border-color .15s, box-shadow .15s' },
+      daysLabel: rot ? `Validade: ${days}` : days,
+      minusDisabled: rot || f.days <= 1, plusDisabled: rot || f.days >= 30, minusStyle: step(rot || f.days <= 1), plusStyle: step(rot || f.days >= 30),
+      onMinus: () => setF({ days: clamp(this.state.form.days - 1, 1, 30) }), onPlus: () => setF({ days: clamp(this.state.form.days + 1, 1, 30) }),
+      ctaLabel: s.pending ? 'Gerando…' : rot ? 'Gerar novo link' : 'Gerar link', pending: s.pending, idle: !s.pending, onSubmit: this.submit, ctaStyle: cta(false),
+      spinnerStyle: { width: 18, height: 18, boxSizing: 'border-box', borderRadius: '50%', border: '2px solid rgba(178,245,47,0.25)', borderTopColor: '#B2F52F', animation: 'tv-spin .8s linear infinite' },
+    };
+  }
+  drawer(open, stacked, z) {
+    const lay = this._lay;
+    return { position: 'absolute', top: 24, bottom: 24, right: 24, width: Math.min(460, lay.W - RAIL - 48), zIndex: z, boxSizing: 'border-box', borderRadius: 28, background: 'var(--panel)', border: '1px solid var(--line2)', boxShadow: 'var(--shadow)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      transform: !open ? 'translateX(calc(100% + 40px))' : stacked ? 'translateX(-40px) scale(0.955)' : 'none', opacity: open ? (stacked ? 0.72 : 1) : 0.4, pointerEvents: open && !stacked ? 'auto' : 'none',
+      transition: `transform .5s ${EASE}, opacity .35s ease, background-color .35s` };
+  }
+
+  renderVals() {
+    const s = this.state, lay = (this._lay = this.lay());
+    if (this.props.theme !== this._pt) { this._pt = this.props.theme; if (this._pt) queueMicrotask(() => this.set({ pref: this._pt })); }
+    if (this.props.pinned !== this._pp) { this._pp = this.props.pinned; queueMicrotask(() => this.set({ pinned: !!this._pp })); }
+    if (this.props.dataset !== this._pd) { this._pd = this.props.dataset; queueMicrotask(() => this.set({ invites: this._pd === 'vazio' ? [] : SEED_INVITES, detail: null })); }
+    cancelAnimationFrame(this._sq); this._sq = requestAnimationFrame(() => this.sync());
+    const resolved = s.pref === 'system' ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : s.pref;
+    const dark = resolved === 'dark', pinned = s.pinned, mobile = lay.mobile;
+    const counts = Object.fromEntries(FILTERS.map(([k]) => [k, k === 'todos' ? s.invites.length : s.invites.filter((i) => stOf(i) === k).length]));
+    const q = s.query.trim().toLowerCase();
+    const sorted = [...s.invites].sort((a, b) => b.createdAt - a.createdAt);
+    const inv = sorted.filter((i) => (s.filter === 'todos' || stOf(i) === s.filter) && (!q || (i.email || 'qualquer e-mail').includes(q)));
+    const rests = s.restaurants.filter((r) => !q || r.name.toLowerCase().includes(q) || r.slug.includes(q.replace(/^\//, '')));
+    const rowBase = (id, cols) => ({ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', height: 76, padding: '0 20px', borderTop: '1px solid var(--line)', cursor: 'pointer', background: s.hover === id || s.detail === id || s.rdetail === id ? 'var(--hover2)' : 'transparent', transition: 'background-color .15s' });
+    const iconBtn = (on, danger) => ({ width: 34, height: 34, borderRadius: 11, border: 'none', background: danger ? 'var(--dangerS)' : 'var(--field)', color: danger ? 'var(--dangerT)' : 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: on ? 1 : 0, transform: on ? 'none' : 'translateX(4px)', transition: `opacity .15s, transform .25s ${EASE}` });
+    const enter = (i) => ({ opacity: s.fade ? 0 : 1, transform: s.fade ? 'translateY(10px)' : 'none', transition: s.fade ? 'opacity .12s ease, transform .12s ease' : `opacity .45s ease ${i * 70}ms, transform .65s ${EASE} ${i * 70}ms` });
+    const glass = { background: 'var(--glass)', backdropFilter: 'blur(18px) saturate(1.2)', WebkitBackdropFilter: 'blur(18px) saturate(1.2)', border: '1px solid var(--line2)', boxShadow: 'var(--shadow)', boxSizing: 'border-box' };
+    const pop = (open, from = 'translateY(8px) scale(0.98)') => ({ opacity: open ? 1 : 0, transform: open ? 'none' : from, pointerEvents: open ? 'auto' : 'none', transition: open ? `opacity .22s ease, transform .3s ${EASE}` : 'opacity .16s ease, transform .16s ease' });
+    const pendingN = counts.pendente;
+    const nav = NAV.map((n) => {
+      const active = n.key === s.page;
+      return { ...n, isMail: n.icon === 'mail', isStore: n.icon === 'store', current: active ? 'page' : undefined, onClick: () => this.go(n.key),
+        count: n.key === 'convites' ? plural(pendingN, 'pendente', 'pendentes') : String(s.restaurants.length),
+        rowStyle: { position: 'absolute', left: 16, right: 16, top: n.cy - HALF, height: HALF * 2, boxSizing: 'border-box', padding: '0 0 0 6px', border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', borderRadius: 18 },
+        tileStyle: { width: 44, height: 44, flexShrink: 0, borderRadius: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? '#B2F52F' : 'transparent', color: active ? '#0A0C09' : 'var(--muted)', boxShadow: active ? '0 10px 24px -12px rgba(178,245,47,0.7)' : 'none', transform: active ? 'scale(1)' : 'scale(0.94)', transition: `background-color .25s ease .1s, color .2s ease .1s, box-shadow .3s, transform .5s ${EASE}` },
+        labelColor: { display: 'block', fontSize: 14, fontWeight: active ? 700 : 600, color: active ? 'var(--text)' : 'var(--muted)' },
+        flyRowStyle: { width: '100%', height: 62, boxSizing: 'border-box', borderRadius: 18, border: 'none', padding: '0 12px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', background: active ? 'var(--field)' : 'transparent' },
+        flyTileStyle: { width: 40, height: 40, flexShrink: 0, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? '#B2F52F' : 'var(--field)', color: active ? '#0A0C09' : 'var(--text)' } };
+    });
+    const openInvite = s.detail && s.invites.find((i) => i.id === s.detail);
+    if (openInvite) this._ivm = this.inviteVm(openInvite);
+    const openRest = s.rdetail && s.restaurants.find((r) => r.id === s.rdetail);
+    if (openRest) this._rvm = this.restVm(openRest);
+    if (s.dialog) this._dlg = s.dialog;
+    const dk = (this._dlg && this._dlg.kind) || 'revoke';
+    const DLG = { revoke: ['Revogar convite?', 'O link deixará de funcionar imediatamente.', 'Cancelar', 'Revogar'], remove: ['Remover este restaurante?', 'O cardápio sai do ar imediatamente e o restaurante deixa de aparecer na lista. Os dados continuam no banco, então isso pode ser desfeito — mas não pela interface.', 'Cancelar', 'Remover'], discard: ['Descartar link?', 'Esse link é exibido uma única vez.', 'Voltar ao link', 'Descartar'] }[dk];
+    const anyDrawer = !!(s.detail || s.rdetail || s.sheet);
+    const mHeroW = lay.W - 36;
+    const paletteAll = [
+      { label: 'Convites', sub: 'Página', run: () => this.go('convites') },
+      { label: 'Restaurantes', sub: 'Página', run: () => this.go('restaurantes') },
+      { label: 'Novo convite', sub: 'Ação', run: () => this.openCreate() },
+      { label: 'Alternar tema', sub: 'Ação', run: () => this.set({ pref: dark ? 'light' : 'dark', palette: false }) },
+    ];
+    const pq = s.pq.trim().toLowerCase(), pItems = paletteAll.filter((p) => !pq || p.label.toLowerCase().includes(pq));
+    return {
+      rootRef: this.rootRef, pathRef: this.pathRef, railRef: this.railRef, contentRef: this.contentRef, heroRef: this.heroRef, mScrollRef: this.mScrollRef,
+      themeVars: { ...THEMES[resolved], display: 'contents' },
+      stageStyle: { position: 'absolute', left: '50%', top: '50%', width: lay.W, height: lay.H, transform: `translate(-50%,-50%) scale(${lay.s})`, overflow: 'hidden', borderRadius: lay.framed ? (mobile ? 44 : 18) : 0, boxShadow: lay.framed ? '0 40px 90px -30px rgba(0,0,0,0.6)' : 'none', background: 'var(--rail)' },
+      isDesktop: !mobile, isMobile: mobile, W: lay.W, H: lay.H, viewBox: `0 0 ${lay.W} ${lay.H}`, panelD: this.currentPath(),
+      navItems: nav,
+      labelStyle: { display: 'block', minWidth: 0, overflow: 'hidden', opacity: pinned ? 1 : 0, transform: pinned ? 'none' : 'translateX(-6px)', transition: pinned ? `opacity .25s ease .14s, transform .4s ${EASE} .12s` : 'opacity .1s, transform .1s', pointerEvents: pinned ? 'auto' : 'none' },
+      labelFlexStyle: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, opacity: pinned ? 1 : 0, transition: pinned ? 'opacity .25s ease .14s' : 'opacity .1s' },
+      pinIconStyle: { display: 'flex', flexShrink: 0, transform: pinned ? 'none' : 'scaleX(-1)', transition: `transform .35s ${EASE}` },
+      pinTitle: pinned ? 'Recolher menu (Ctrl B)' : 'Fixar menu aberto (Ctrl B)', togglePinned: this.togglePinned,
+      avatarStyle: { width: 44, height: 44, flexShrink: 0, borderRadius: 15, background: s.account ? '#B2F52F' : 'var(--field)', color: s.account ? '#0A0C09' : 'var(--text)', border: '1px solid var(--line)', boxSizing: 'border-box', fontSize: 15, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color .2s, color .2s' },
+      toggleAccount: () => this.set({ account: !s.account, flyout: false }), closeAccount: () => this.set({ account: false }),
+      accountCatcher: { position: 'absolute', inset: 0, zIndex: 8, display: s.account ? 'block' : 'none' },
+      accountStyle: { position: 'absolute', left: (pinned ? RAIL_PIN : RAIL) + 10, bottom: 20, width: 300, zIndex: 9, padding: 16, borderRadius: 26, display: 'flex', flexDirection: 'column', gap: 14, ...glass, ...pop(s.account, 'translateX(-8px) scale(0.98)'), transformOrigin: 'left bottom' },
+      openPalette: () => this.set({ palette: true, pq: '' }),
+      onRailEnter: () => { clearTimeout(this.ft); if (!this.state.pinned && !this.state.account) this.ft = setTimeout(() => this.set({ flyout: true }), 200); },
+      onRailLeave: () => { clearTimeout(this.ft); this.ft = setTimeout(() => this.set({ flyout: false }), 180); },
+      onFlyEnter: () => clearTimeout(this.ft),
+      flyoutStyle: { position: 'absolute', left: RAIL + 10, top: 150, width: 320, zIndex: 10, padding: 8, borderRadius: 26, display: 'flex', flexDirection: 'column', gap: 4, ...glass, ...pop(s.flyout && !pinned, 'translateX(-10px) scale(0.98)'), transformOrigin: 'left top' },
+      themeOptions: [['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Escuro']].map(([k, label]) => ({ label, onClick: () => this.set({ pref: k }),
+        style: { height: 38, borderRadius: 12, border: 'none', cursor: 'pointer', font: "600 12.5px 'Plus Jakarta Sans',sans-serif", background: s.pref === k ? 'var(--surface)' : 'transparent', color: s.pref === k ? 'var(--text)' : 'var(--muted)', boxShadow: s.pref === k ? (dark ? 'inset 0 0 0 1px rgba(244,246,240,0.10)' : '0 1px 3px rgba(30,40,20,0.12)') : 'none', transition: 'background-color .2s, color .2s' } })),
+      signOut: () => this.flash('Sessão encerrada (protótipo)'),
+      enter0: enter(0), enter1: enter(1), enter2: enter(2),
+      isConvites: s.view === 'convites', isRestaurantes: s.view === 'restaurantes',
+      heroTitle: s.view === 'convites' ? 'Convites' : 'Restaurantes',
+      heroDesc: s.view === 'convites' ? 'Crie acessos seguros para que novos clientes cadastrem e administrem seus restaurantes.' : 'Acompanhe os estabelecimentos, endereços públicos e situação de publicação.',
+      mHeroDesc: s.view === 'convites' ? 'Crie acessos seguros para novos administradores.' : 'Acompanhe os estabelecimentos, endereços públicos e situação de publicação.',
+      heroSummary: s.view === 'convites' ? `${plural(s.invites.length, 'convite', 'convites')} · ${plural(pendingN, 'pendente', 'pendentes')}` : `${plural(s.restaurants.length, 'restaurante', 'restaurantes')} · ${plural(s.restaurants.filter((r) => r.status === 'active').length, 'ativo', 'ativos')}`,
+      openCreateNew: () => this.openCreate(),
+      query: s.query, onQuery: (e) => this.set({ query: e.target.value }),
+      searchPlaceholder: s.view === 'convites' ? 'Buscar por e-mail' : 'Buscar restaurante ou /slug',
+      chips: FILTERS.map(([k, label]) => {
+        const on = s.filter === k;
+        const base = { flexShrink: 0, boxSizing: 'border-box', border: on ? '1px solid transparent' : '1px solid var(--line)', background: on ? '#B2F52F' : 'var(--surface)', color: on ? '#0A0C09' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 600, transition: 'background-color .2s, color .2s' };
+        return { label, count: counts[k], onClick: () => this.set({ filter: k }),
+          style: { ...base, height: 42, padding: '0 14px', borderRadius: 14, fontSize: 13 },
+          mStyle: { ...base, height: 44, padding: '0 16px', borderRadius: 14, fontSize: 14 },
+          countStyle: { fontSize: 12, fontWeight: 600, color: on ? 'rgba(10,12,9,0.6)' : 'var(--subtle)' } };
+      }),
+      showInviteTable: s.invites.length > 0, showInviteEmpty: s.invites.length === 0 && s.view === 'convites',
+      inviteRows: inv.map((i) => {
+        const st = stOf(i), [label, tone] = STATUS[st], on = s.hover === i.id;
+        const stop = (fn) => (e) => { e.stopPropagation(); fn(); };
+        return { id: i.id, title: i.email || 'Qualquer e-mail', meta: metaOf(i), statusLabel: label, created: new Date(i.createdAt).toLocaleDateString('pt-BR'), valid: new Date(i.expiresAt).toLocaleDateString('pt-BR'), isPending: st === 'pendente',
+          rotateTitle: st === 'pendente' ? 'Gerar novo link' : 'Gerar novo convite',
+          onOpen: () => this.openInvite(i.id), onEnter: () => this.set({ hover: i.id }), onLeave: () => this.set({ hover: null }),
+          onRotate: stop(() => this.openCreate(i.id)), onRevoke: stop(() => this.set({ dialog: { kind: 'revoke', id: i.id } })),
+          style: rowBase(i.id, 'minmax(0,2.4fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 124px'), badgeStyle: badge(tone),
+          actionStyle: iconBtn(on), revokeStyle: iconBtn(on, true),
+          chevronStyle: { width: 30, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', color: on ? 'var(--text)' : 'var(--subtle)', transform: on ? 'translateX(2px)' : 'none', transition: `transform .25s ${EASE}, color .15s` } };
+      }),
+      noFilteredInvites: s.invites.length > 0 && inv.length === 0,
+      emptyFilterText: q ? `Nenhum convite encontrado para “${s.query}”.` : 'Nenhum convite nesta situação.',
+      restaurantRows: rests.map((r) => {
+        const [label, tone] = REST_STATUS[r.status], on = s.hover === r.id;
+        return { ...r, initials: initials(r.name), statusLabel: label, badgeStyle: badge(tone), onOpen: () => this.openRest(r.id), onEnter: () => this.set({ hover: r.id }), onLeave: () => this.set({ hover: null }),
+          style: rowBase(r.id, 'minmax(0,2.2fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1fr) 56px'),
+          chevronStyle: { display: 'flex', justifyContent: 'flex-end', color: on ? 'var(--text)' : 'var(--subtle)', transform: on ? 'translateX(2px)' : 'none', transition: `transform .25s ${EASE}` } };
+      }),
+      noRestaurants: rests.length === 0, emptyRestText: q ? `Nenhum restaurante encontrado para “${s.query}”.` : 'Nenhum restaurante cadastrado.',
+      drawerScrim: { position: 'absolute', inset: 0, zIndex: 20, background: 'var(--scrim)', opacity: anyDrawer ? 0.7 : 0, pointerEvents: anyDrawer ? 'auto' : 'none', transition: 'opacity .3s ease' },
+      closeTopDrawer: () => (s.sheet ? this.closeSheet() : this.set({ detail: null, rdetail: null })),
+      inviteDrawerStyle: this.drawer(!!openInvite, s.sheet, 22), restDrawerStyle: this.drawer(!!openRest, false, 22), sheetDrawerStyle: this.drawer(s.sheet, false, 24),
+      closeInvite: () => this.set({ detail: null }), closeRest: () => this.set({ rdetail: null }), closeSheet: this.closeSheet,
+      hasInviteVm: !!this._ivm, inviteVm: this._ivm, hasRestVm: !!this._rvm, restVm: this._rvm, formVm: this.formVm(),
+      mIsList: s.mRoute === 'list', mIsDetail: s.mRoute !== 'list', mIsInvite: s.mRoute === 'invite', mIsRest: s.mRoute === 'restaurant',
+      mDetailTitle: s.mRoute === 'invite' ? 'Convite' : 'Restaurante', mBack: () => this.swap({}, { mRoute: 'list', detail: null, rdetail: null }),
+      mHeroClip: { position: 'absolute', inset: 0, overflow: 'hidden', clipPath: `path('${notched(mHeroW, 226, 30, 68, 68, 26)}')`, background: 'radial-gradient(80% 80% at 108% 122%, rgba(178,245,47,0.2), transparent 70%), linear-gradient(135deg,#121510,#0E120C)' },
+      mScrim: { position: 'absolute', inset: 0, zIndex: 25, background: 'var(--scrim)', opacity: s.mPanel !== 'none' ? 1 : 0, pointerEvents: s.mPanel !== 'none' ? 'auto' : 'none', transition: 'opacity .2s ease' },
+      closeMPanel: () => this.set({ mPanel: 'none' }),
+      toggleMAccount: () => this.set({ mPanel: s.mPanel === 'account' ? 'none' : 'account' }), toggleMMenu: () => this.set({ mPanel: s.mPanel === 'menu' ? 'none' : 'menu' }),
+      mHome: () => this.go('convites'),
+      mAccountStyle: { position: 'absolute', left: 12, bottom: 104, width: 286, maxWidth: 'calc(100% - 24px)', zIndex: 30, padding: 16, borderRadius: 26, display: 'flex', flexDirection: 'column', gap: 14, overflow: 'hidden', ...glass, ...pop(s.mPanel === 'account', 'translateY(14px)') },
+      mMenuStyle: { position: 'absolute', left: 12, right: 12, bottom: 104, zIndex: 30, padding: 8, borderRadius: 26, display: 'flex', flexDirection: 'column', gap: 4, overflow: 'hidden', ...glass, ...pop(s.mPanel === 'menu', 'translateY(14px)') },
+      mAccountBtn: { width: 48, height: 48, borderRadius: 24, border: 'none', background: s.mPanel === 'account' ? 'rgba(178,245,47,0.14)' : 'transparent', color: s.mPanel === 'account' ? '#B2F52F' : '#F4F6F0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'background-color .2s, color .2s' },
+      mMenuBtn: { width: 48, height: 48, borderRadius: 24, border: 'none', background: s.mPanel === 'menu' ? 'rgba(178,245,47,0.14)' : 'transparent', color: s.mPanel === 'menu' ? '#B2F52F' : '#F4F6F0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'background-color .2s, color .2s' },
+      themeName: { system: `Sistema · ${dark ? 'Escuro' : 'Claro'}`, light: 'Claro', dark: 'Escuro' }[s.pref],
+      prefSystem: s.pref === 'system', prefLight: s.pref === 'light', prefDark: s.pref === 'dark',
+      cycleTheme: () => this.set({ pref: { system: 'light', light: 'dark', dark: 'system' }[s.pref] }),
+      mSheetScrim: { position: 'absolute', inset: 0, zIndex: 45, background: 'var(--scrim)', opacity: s.sheet ? 1 : 0, pointerEvents: s.sheet ? 'auto' : 'none', transition: 'opacity .3s ease' },
+      mSheetStyle: { position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '90%', zIndex: 50, boxSizing: 'border-box', borderRadius: '34px 34px 0 0', background: 'var(--surface)', borderTop: '1px solid var(--line2)', padding: '10px 18px 34px', display: 'flex', flexDirection: 'column', transform: s.sheet ? 'none' : 'translateY(105%)', transition: `transform .5s ${EASE}`, boxShadow: '0 -20px 50px -20px rgba(0,0,0,0.5)' },
+      dialogScrim: { position: 'absolute', inset: 0, zIndex: 55, background: 'var(--scrim)', opacity: s.dialog ? 1 : 0, pointerEvents: s.dialog ? 'auto' : 'none', transition: 'opacity .2s ease' },
+      dialogStyle: { position: 'absolute', left: '50%', top: '50%', width: 'min(420px, calc(100% - 40px))', zIndex: 56, boxSizing: 'border-box', padding: 22, borderRadius: 28, background: 'var(--surface)', border: '1px solid var(--line2)', boxShadow: 'var(--shadow)', display: 'flex', flexDirection: 'column', gap: 10, fontFamily: "'Plus Jakarta Sans',sans-serif", opacity: s.dialog ? 1 : 0, transform: s.dialog ? 'translate(-50%,-50%)' : 'translate(-50%,-46%) scale(0.97)', pointerEvents: s.dialog ? 'auto' : 'none', transition: s.dialog ? `opacity .2s ease, transform .35s ${EASE}` : 'opacity .15s, transform .15s' },
+      dialogTileStyle: { width: 46, height: 46, borderRadius: 14, background: dk === 'discard' ? 'var(--warnS)' : 'var(--dangerS)', color: dk === 'discard' ? 'var(--warnT)' : 'var(--dangerT)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+      dialogIsTrash: dk === 'remove', dialogIsBan: dk !== 'remove',
+      dialogTitle: DLG[0], dialogDesc: DLG[1], dialogCancel: DLG[2], dialogConfirm: DLG[3], cancelDialog: this.cancelDialog, confirmDialog: this.confirmDialog,
+      paletteOpen: s.palette, closePalette: () => this.set({ palette: false }), pq: s.pq, onPq: (e) => this.set({ pq: e.target.value }),
+      onPaletteKey: (e) => { if (e.key === 'Enter' && pItems[0]) { this.set({ palette: false }); pItems[0].run(); } },
+      paletteItems: pItems.map((p, i) => ({ label: p.label, sub: p.sub, onClick: () => { this.set({ palette: false }); p.run(); },
+        style: { height: 48, borderRadius: 14, border: 'none', padding: '0 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', fontFamily: 'inherit', background: i === 0 && pq ? 'var(--field)' : 'transparent' } })),
+      paletteEmpty: pItems.length === 0,
+      toastText: s.toast,
+      toastStyle: { position: 'absolute', left: '50%', [mobile ? 'top' : 'bottom']: mobile ? 18 : 28, zIndex: 70, height: 44, boxSizing: 'border-box', padding: '0 16px 0 10px', borderRadius: 15, background: 'var(--surface)', border: '1px solid var(--line2)', boxShadow: 'var(--shadow)', display: 'flex', alignItems: 'center', gap: 10, font: "600 13px 'Plus Jakarta Sans',sans-serif", color: 'var(--text)', whiteSpace: 'nowrap', opacity: s.toastOn ? 1 : 0, transform: `translateX(-50%) ${s.toastOn ? '' : mobile ? 'translateY(-10px)' : 'translateY(10px)'}`, pointerEvents: 'none', transition: `opacity .25s ease, transform .4s ${EASE}` },
+    };
+  }
+}
+</script>
+</body>
+</html>

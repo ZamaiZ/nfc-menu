@@ -56,6 +56,29 @@ export type InviteDTO = {
   revokedAt: string | null
 }
 
+export type PlatformInviteDTO = {
+  id: string
+  email: string | null
+  createdAt: string
+  expiresAt: string
+  redeemedAt: string | null
+  revokedAt: string | null
+  createdByEmail: string
+  redeemedByEmail: string | null
+}
+
+export type InviteState = 'pending' | 'redeemed' | 'expired' | 'revoked'
+
+export function inviteState(
+  invite: PlatformInviteDTO,
+  now = Date.now(),
+): InviteState {
+  if (invite.revokedAt) return 'revoked'
+  if (invite.redeemedAt) return 'redeemed'
+  if (Date.parse(invite.expiresAt) <= now) return 'expired'
+  return 'pending'
+}
+
 export type InviteStatus = 'pendente' | 'resgatado' | 'revogado' | 'vencido'
 
 // Derivada, e não gravada: uma coluna de situação precisaria de um job para

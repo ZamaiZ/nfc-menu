@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+@font-face{font-family:'Plus Jakarta Sans';src:url('fonts/PlusJakartaSans_500Medium.ttf');font-weight:500}
+@font-face{font-family:'Plus Jakarta Sans';src:url('fonts/PlusJakartaSans_600SemiBold.ttf');font-weight:600}
+@font-face{font-family:'Plus Jakarta Sans';src:url('fonts/PlusJakartaSans_700Bold.ttf');font-weight:700}
+@font-face{font-family:'Plus Jakarta Sans';src:url('fonts/PlusJakartaSans_800ExtraBold.ttf');font-weight:800}
+@keyframes tv-spin{to{transform:rotate(360deg)}}
+body{margin:0;background:#DCDFD5;font-family:'Plus Jakarta Sans',ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+input::placeholder{color:var(--tv-subtle);opacity:1}
+a{color:#11150F}
+a:hover{color:#557D00}
+</style>
+</helmet>
+<section style="padding:64px;display:flex;flex-direction:column;gap:32px">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:760px">
+    <h1 style="margin:0;font-size:28px;line-height:34px;font-weight:800;letter-spacing:-0.8px;color:#11150F">Login · Painel do restaurante</h1>
+    <p style="margin:0;font-size:15px;line-height:22px;font-weight:500;color:#62675E;text-wrap:pretty">Mesmo modelo do <a href="#1a">1a</a> (admin atual). <a href="#1b">1b</a> e <a href="#1c">1c</a> são a proposta para /painel/entrar: sem a marca d'água gigante e sem rodapé no hero, com as áreas do painel como evidência e o atalho para quem chegou por convite.</p>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+    <sc-for list="{{ boards }}" as="b" hint-placeholder-count="2">
+      <div id="{{ b.id }}" style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:9px;background:#11150F;color:#B2F52F;font-size:12px;font-weight:700;letter-spacing:0.02em">{{ b.id }}</span>
+          <span style="font-size:14px;font-weight:600;color:#11150F">{{ b.label }}</span>
+        </div>
+        <div style="{{ vars }}">
+          <main style="position:relative;width:1440px;height:900px;padding:16px;box-sizing:border-box;overflow:hidden;background:var(--tv-screen);color:var(--tv-text);border-radius:6px;box-shadow:0 30px 80px -40px rgba(10,12,9,0.45);transition:background-color .15s">
+            <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(70% 45% at 25% 4%, var(--tv-glow), transparent)"></div>
+            <div style="position:relative;height:100%;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,440px);gap:48px;padding:44px 80px 44px 48px">
+              <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;overflow:hidden">
+                <div style="position:absolute;inset:0;overflow:hidden;clip-path:path('M 32 0 H 1310 C 1322.1 0 1332 9.9 1332 22 V 50 C 1332 62.1 1341.9 72 1354 72 H 1376 C 1396 72 1408 84 1408 104 V 836 C 1408 856 1396 868 1376 868 H 32 C 12 868 0 856 0 836 V 32 C 0 12 12 0 32 0 Z');background:radial-gradient(48% 64% at 72% 62%, var(--tv-hero-glow), transparent), linear-gradient(135deg, var(--tv-hero), var(--tv-hero-end))">
+                  <sc-if value="{{ b.showMark }}" hint-placeholder-val="{{ true }}">
+                    <img src="assets/tavvi-brandmark.png" alt="" style="position:absolute;right:-60px;bottom:-250px;width:820px;height:820px;max-width:none;object-fit:contain;opacity:0.16">
+                  </sc-if>
+                </div>
+                <svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 1408 868" preserveAspectRatio="none"><path d="M 32 0 H 1310 C 1322.1 0 1332 9.9 1332 22 V 50 C 1332 62.1 1341.9 72 1354 72 H 1376 C 1396 72 1408 84 1408 104 V 836 C 1408 856 1396 868 1376 868 H 32 C 12 868 0 856 0 836 V 32 C 0 12 12 0 32 0 Z" fill="none" stroke="var(--tv-border)" stroke-width="1"></path></svg>
+              </div>
+
+              <section style="position:relative;display:flex;min-height:0;flex-direction:column;justify-content:space-between">
+                <div style="position:relative;z-index:10;display:flex;height:100%;min-width:0;flex-direction:column;justify-content:space-between;padding:0 8px 4px 0">
+                  <div style="display:flex;flex-direction:column;align-items:flex-start;gap:16px">
+                    <img src="assets/tavvi-lockup-horizontal.png" alt="Tavvi" style="width:102px;height:40px;object-fit:contain">
+                    <div style="display:inline-flex;min-height:30px;max-width:100%;box-sizing:border-box;align-items:center;gap:8px;border-radius:15px;background:var(--tv-lime-soft);padding:4px 12px;color:var(--tv-lime)">
+                      <span aria-hidden="true" style="width:6px;height:6px;flex-shrink:0;border-radius:50%;background:var(--tv-lime);box-shadow:0 0 0 3px var(--tv-lime-soft)"></span>
+                      <span style="font-size:12px;line-height:16px;font-weight:600">{{ b.badge }}</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;max-width:520px;flex-direction:column;gap:16px;padding-bottom:4px">
+                    <h1 style="margin:0;font-size:76px;line-height:76px;font-weight:800;letter-spacing:-2.8px;color:var(--tv-on-dark);text-wrap:balance">{{ b.title }}<span style="color:var(--tv-lime)">.</span></h1>
+                    <p style="margin:0;max-width:420px;font-size:18px;line-height:27px;font-weight:500;color:var(--tv-muted-on-dark)">{{ b.subtitle }}</p>
+                    <sc-if value="{{ b.showFooter }}" hint-placeholder-val="{{ true }}">
+                      <div style="margin-top:12px;display:flex;align-items:center;gap:8px">
+                        <img src="assets/tavvi-wordmark.png" alt="" aria-hidden="true" style="width:44px;height:16px;object-fit:contain;opacity:0.5;filter:var(--tv-wm-filter)">
+                        <span aria-hidden="true" style="width:3px;height:3px;border-radius:50%;background:var(--tv-border)"></span>
+                        <span style="font-size:12px;line-height:16px;font-weight:500;color:var(--tv-subtle-on-dark)">{{ year }}</span>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ b.showAreas }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">
+                        <span style="display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:12px;background:var(--tv-on-dark-chip);color:var(--tv-muted-on-dark);font-size:12px;line-height:16px;font-weight:600">Cardápio</span>
+                        <span style="display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:12px;background:var(--tv-on-dark-chip);color:var(--tv-muted-on-dark);font-size:12px;line-height:16px;font-weight:600">Identidade</span>
+                        <span style="display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:12px;background:var(--tv-on-dark-chip);color:var(--tv-muted-on-dark);font-size:12px;line-height:16px;font-weight:600">Equipe</span>
+                        <span style="display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:12px;background:var(--tv-on-dark-chip);color:var(--tv-muted-on-dark);font-size:12px;line-height:16px;font-weight:600">Contato</span>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+              </section>
+
+              <div style="position:relative;z-index:10;display:flex;width:100%;flex-direction:column;align-self:center">
+                <form noValidate="{{ true }}" onSubmit="{{ b.f.onSubmit }}" style="display:flex;width:100%;box-sizing:border-box;flex-direction:column;gap:16px;border-radius:30px;border:1px solid var(--tv-border);background:var(--tv-surface);color:var(--tv-text);padding:26px 24px 24px;box-shadow:var(--tv-card-shadow);transition:background-color .15s">
+                  <sc-if value="{{ b.f.hasFormError }}" hint-placeholder-val="{{ false }}">
+                    <div role="alert" style="border-radius:14px;background:var(--tv-error-surface);padding:12px;font-size:12.5px;line-height:17px;font-weight:500;color:var(--tv-error)">{{ b.f.formError }}</div>
+                  </sc-if>
+                  <div style="display:flex;min-height:28px;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;padding:0 4px">
+                    <h2 style="margin:0;font-size:22px;line-height:26px;font-weight:800;letter-spacing:-0.66px">Entrar</h2>
+                    <p style="margin:0;font-size:12px;line-height:16px;font-weight:500;color:var(--tv-subtle)">{{ b.formHint }}</p>
+                  </div>
+
+                  <div style="display:flex;min-width:0;flex-direction:column;gap:8px">
+                    <div style="display:flex;min-height:16px;align-items:center;justify-content:space-between;gap:8px;padding:0 4px">
+                      <label style="font-size:12px;line-height:16px;font-weight:600;color:var(--tv-text)">E-mail</label>
+                    </div>
+                    <div style="display:flex;min-height:54px;box-sizing:border-box;align-items:center;gap:12px;border-radius:18px;border:1px solid {{ b.f.emailBorder }};background:var(--tv-field);padding:0 8px 0 16px;box-shadow:{{ b.f.emailRing }};transition:border-color .2s,box-shadow .2s">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ b.f.emailIcon }};transition:color .15s"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+                      <input type="email" name="email" value="{{ b.f.email }}" onChange="{{ b.f.onEmail }}" onFocus="{{ b.f.onFocusEmail }}" onBlur="{{ b.f.onBlur }}" placeholder="{{ b.emailPh }}" autoComplete="email" readOnly="{{ b.f.pending }}" style="min-width:0;flex:1;background:transparent;border:0;padding:12px 0;font-family:inherit;font-size:14.5px;line-height:20px;font-weight:500;color:var(--tv-text);outline:none">
+                    </div>
+                    <sc-if value="{{ b.f.hasEmailError }}" hint-placeholder-val="{{ false }}">
+                      <p role="alert" style="margin:0;padding:0 4px;font-size:12px;line-height:16px;font-weight:500;color:var(--tv-error)">{{ b.f.emailError }}</p>
+                    </sc-if>
+                  </div>
+
+                  <div style="display:flex;min-width:0;flex-direction:column;gap:8px">
+                    <div style="display:flex;min-height:16px;align-items:center;justify-content:space-between;gap:8px;padding:0 4px">
+                      <label style="font-size:12px;line-height:16px;font-weight:600;color:var(--tv-text)">Senha</label>
+                      <sc-if value="{{ b.f.caps }}" hint-placeholder-val="{{ false }}">
+                        <span style="border-radius:12px;background:var(--tv-warn-surface);padding:4px 8px;font-size:11px;line-height:16px;font-weight:500;color:var(--tv-warn)">Caps Lock ativado</span>
+                      </sc-if>
+                    </div>
+                    <div style="display:flex;min-height:54px;box-sizing:border-box;align-items:center;gap:12px;border-radius:18px;border:1px solid {{ b.f.passBorder }};background:var(--tv-field);padding:0 8px 0 16px;box-shadow:{{ b.f.passRing }};transition:border-color .2s,box-shadow .2s">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ b.f.passIcon }};transition:color .15s"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                      <input type="{{ b.f.passType }}" name="password" value="{{ b.f.password }}" onChange="{{ b.f.onPassword }}" onFocus="{{ b.f.onFocusPass }}" onBlur="{{ b.f.onBlur }}" onKeyDown="{{ b.f.onKey }}" onKeyUp="{{ b.f.onKey }}" placeholder="Sua senha" autoComplete="current-password" readOnly="{{ b.f.pending }}" style="min-width:0;flex:1;background:transparent;border:0;padding:12px 0;font-family:inherit;font-size:14.5px;line-height:20px;font-weight:500;color:var(--tv-text);outline:none">
+                      <button type="button" onClick="{{ b.f.onReveal }}" aria-label="{{ b.f.revealLabel }}" style="display:flex;width:44px;height:44px;flex-shrink:0;align-items:center;justify-content:center;border-radius:15px;border:0;background:transparent;color:var(--tv-subtle);cursor:pointer;transition:background-color .15s,color .15s" style-hover="background:var(--tv-hover);color:var(--tv-text)">
+                        <sc-if value="{{ b.f.revealed }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"></path><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"></path><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"></path><path d="m2 2 20 20"></path></svg></sc-if>
+                        <sc-if value="{{ b.f.hidden }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg></sc-if>
+                      </button>
+                    </div>
+                    <sc-if value="{{ b.f.hasPasswordError }}" hint-placeholder-val="{{ false }}">
+                      <p role="alert" style="margin:0;padding:0 4px;font-size:12px;line-height:16px;font-weight:500;color:var(--tv-error)">{{ b.f.passwordError }}</p>
+                    </sc-if>
+                  </div>
+
+                  <button type="submit" disabled="{{ b.f.ctaDisabled }}" style="margin-top:4px;display:flex;min-height:58px;width:100%;box-sizing:border-box;align-items:center;justify-content:space-between;border-radius:20px;border:0;background:var(--tv-lime);padding:7px 7px 7px 22px;color:var(--tv-ink);font-family:inherit;opacity:{{ b.f.ctaOpacity }};cursor:{{ b.f.ctaCursor }};transition:background-color .2s,box-shadow .2s,opacity .2s" style-hover="background:var(--tv-lime-pressed);box-shadow:0 14px 34px -10px var(--tv-lime-cta-glow)">
+                    <span style="font-size:14px;line-height:20px;font-weight:700">{{ b.f.ctaLabel }}</span>
+                    <span style="display:flex;width:44px;height:44px;flex-shrink:0;align-items:center;justify-content:center;border-radius:15px;background:var(--tv-ink);color:var(--tv-lime)">
+                      <sc-if value="{{ b.f.pending }}" hint-placeholder-val="{{ false }}">{{ spinner }}</sc-if>
+                      <sc-if value="{{ b.f.idle }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></sc-if>
+                    </span>
+                  </button>
+
+                  <sc-if value="{{ b.showInvite }}" hint-placeholder-val="{{ false }}">
+                    <p style="margin:0;padding:0 4px;text-align:center;font-size:12px;line-height:16px;font-weight:500;color:var(--tv-subtle);text-wrap:pretty">Recebeu um convite? Abra o link enviado ao seu e-mail.</p>
+                  </sc-if>
+                </form>
+              </div>
+
+              <button type="button" onClick="{{ toggleTheme }}" aria-label="Alternar tema" style="position:absolute;top:0;right:0;z-index:20;display:flex;width:54px;height:54px;align-items:center;justify-content:center;border-radius:19px;border:1px solid var(--tv-toggle-line);background:var(--tv-surface);color:var(--tv-text);cursor:pointer;transition:background-color .15s" style-hover="background:var(--tv-hover)">
+                <sc-if value="{{ isLight }}" hint-placeholder-val="{{ true }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41-1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></sc-if>
+                <sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></sc-if>
+              </button>
+            </div>
+          </main>
+        </div>
+      </div>
+    </sc-for>
+
+    <div id="1c" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:9px;background:#11150F;color:#B2F52F;font-size:12px;font-weight:700;letter-spacing:0.02em">1c</span>
+        <span style="font-size:14px;font-weight:600;color:#11150F">Proposta · /painel/entrar · celular</span>
+      </div>
+      <div style="{{ vars }}">
+        <main style="position:relative;display:flex;flex-direction:column;width:390px;height:844px;box-sizing:border-box;overflow:hidden;background:var(--tv-screen);color:var(--tv-text);border-radius:6px;box-shadow:0 30px 80px -40px rgba(10,12,9,0.45);transition:background-color .15s">
+          <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(70% 45% at 25% 4%, var(--tv-glow), transparent)"></div>
+          <div style="position:relative;display:flex;flex:1;flex-direction:column;gap:16px;padding:24px">
+            <section style="position:relative;height:264px;flex-shrink:0">
+              <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;overflow:hidden">
+                <div style="position:absolute;inset:0;overflow:hidden;clip-path:path('M 28 0 H 244 C 256.1 0 266 9.9 266 22 V 50 C 266 62.1 275.9 72 288 72 H 314 C 330 72 342 84 342 100 V 236 C 342 252 330 264 314 264 H 28 C 12 264 0 252 0 236 V 28 C 0 12 12 0 28 0 Z');background:radial-gradient(48% 64% at 84% 82%, var(--tv-hero-glow), transparent), linear-gradient(135deg, var(--tv-hero), var(--tv-hero-end))">
+                  <sc-if value="{{ m.showMark }}" hint-placeholder-val="{{ false }}">
+                    <img src="assets/tavvi-brandmark.png" alt="" style="position:absolute;top:66px;left:calc(100% - 172px);width:252px;height:252px;max-width:none;object-fit:contain;opacity:0.2">
+                  </sc-if>
+                </div>
+                <svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 342 264" preserveAspectRatio="none"><path d="M 28 0 H 244 C 256.1 0 266 9.9 266 22 V 50 C 266 62.1 275.9 72 288 72 H 314 C 330 72 342 84 342 100 V 236 C 342 252 330 264 314 264 H 28 C 12 264 0 252 0 236 V 28 C 0 12 12 0 28 0 Z" fill="none" stroke="var(--tv-border)" stroke-width="1"></path></svg>
+              </div>
+              <div style="position:relative;z-index:10;display:flex;height:100%;box-sizing:border-box;flex-direction:column;justify-content:space-between;padding:22px">
+                <div style="display:flex;flex-direction:column;align-items:flex-start;gap:16px">
+                  <img src="assets/tavvi-lockup-horizontal.png" alt="Tavvi" style="width:78px;height:31px;object-fit:contain">
+                  <div style="display:inline-flex;min-height:26px;max-width:100%;box-sizing:border-box;align-items:center;gap:8px;border-radius:13px;background:var(--tv-lime-soft);padding:4px 10px;color:var(--tv-lime)">
+                    <span aria-hidden="true" style="width:6px;height:6px;flex-shrink:0;border-radius:50%;background:var(--tv-lime);box-shadow:0 0 0 3px var(--tv-lime-soft)"></span>
+                    <span style="font-size:11px;line-height:16px;font-weight:600">Painel · Acesso do restaurante</span>
+                  </div>
+                </div>
+                <div style="display:flex;max-width:230px;flex-direction:column;gap:10px">
+                  <h1 style="margin:0;font-size:31px;line-height:32px;font-weight:800;letter-spacing:-1.1px;color:var(--tv-on-dark)">Painel do restaurante<span style="color:var(--tv-lime)">.</span></h1>
+                  <p style="margin:0;font-size:13px;line-height:18px;font-weight:500;color:var(--tv-muted-on-dark)">Entre para cuidar do seu cardápio.</p>
+                </div>
+              </div>
+            </section>
+
+            <form noValidate="{{ true }}" onSubmit="{{ m.f.onSubmit }}" style="display:flex;width:100%;box-sizing:border-box;flex-direction:column;gap:16px;border-radius:28px;border:1px solid var(--tv-border);background:var(--tv-surface);color:var(--tv-text);padding:22px 18px 18px;transition:background-color .15s">
+              <sc-if value="{{ m.f.hasFormError }}" hint-placeholder-val="{{ false }}">
+                <div role="alert" style="border-radius:14px;background:var(--tv-error-surface);padding:12px;font-size:12.5px;line-height:17px;font-weight:500;color:var(--tv-error)">{{ m.f.formError }}</div>
+              </sc-if>
+              <div style="display:flex;min-height:28px;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;padding:0 4px">
+                <h2 style="margin:0;font-size:22px;line-height:26px;font-weight:800;letter-spacing:-0.66px">Entrar</h2>
+                <p style="margin:0;font-size:12px;line-height:16px;font-weight:500;color:var(--tv-subtle)">Conta do restaurante</p>
+              </div>
+              <div style="display:flex;min-width:0;flex-direction:column;gap:8px">
+                <div style="display:flex;min-height:16px;align-items:center;padding:0 4px">
+                  <label style="font-size:12px;line-height:16px;font-weight:600;color:var(--tv-text)">E-mail</label>
+                </div>
+                <div style="display:flex;min-height:54px;box-sizing:border-box;align-items:center;gap:12px;border-radius:18px;border:1px solid {{ m.f.emailBorder }};background:var(--tv-field);padding:0 8px 0 16px;box-shadow:{{ m.f.emailRing }};transition:border-color .2s,box-shadow .2s">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ m.f.emailIcon }}"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+                  <input type="email" name="email" value="{{ m.f.email }}" onChange="{{ m.f.onEmail }}" onFocus="{{ m.f.onFocusEmail }}" onBlur="{{ m.f.onBlur }}" placeholder="voce@seurestaurante.com" autoComplete="email" readOnly="{{ m.f.pending }}" style="min-width:0;flex:1;background:transparent;border:0;padding:12px 0;font-family:inherit;font-size:14.5px;line-height:20px;font-weight:500;color:var(--tv-text);outline:none">
+                </div>
+                <sc-if value="{{ m.f.hasEmailError }}" hint-placeholder-val="{{ false }}">
+                  <p role="alert" style="margin:0;padding:0 4px;font-size:12px;line-height:16px;font-weight:500;color:var(--tv-error)">{{ m.f.emailError }}</p>
+                </sc-if>
+              </div>
+              <div style="display:flex;min-width:0;flex-direction:column;gap:8px">
+                <div style="display:flex;min-height:16px;align-items:center;justify-content:space-between;gap:8px;padding:0 4px">
+                  <label style="font-size:12px;line-height:16px;font-weight:600;color:var(--tv-text)">Senha</label>
+                  <sc-if value="{{ m.f.caps }}" hint-placeholder-val="{{ false }}">
+                    <span style="border-radius:12px;background:var(--tv-warn-surface);padding:4px 8px;font-size:11px;line-height:16px;font-weight:500;color:var(--tv-warn)">Caps Lock ativado</span>
+                  </sc-if>
+                </div>
+                <div style="display:flex;min-height:54px;box-sizing:border-box;align-items:center;gap:12px;border-radius:18px;border:1px solid {{ m.f.passBorder }};background:var(--tv-field);padding:0 8px 0 16px;box-shadow:{{ m.f.passRing }};transition:border-color .2s,box-shadow .2s">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:{{ m.f.passIcon }}"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  <input type="{{ m.f.passType }}" name="password" value="{{ m.f.password }}" onChange="{{ m.f.onPassword }}" onFocus="{{ m.f.onFocusPass }}" onBlur="{{ m.f.onBlur }}" onKeyDown="{{ m.f.onKey }}" onKeyUp="{{ m.f.onKey }}" placeholder="Sua senha" autoComplete="current-password" readOnly="{{ m.f.pending }}" style="min-width:0;flex:1;background:transparent;border:0;padding:12px 0;font-family:inherit;font-size:14.5px;line-height:20px;font-weight:500;color:var(--tv-text);outline:none">
+                  <button type="button" onClick="{{ m.f.onReveal }}" aria-label="{{ m.f.revealLabel }}" style="display:flex;width:44px;height:44px;flex-shrink:0;align-items:center;justify-content:center;border-radius:15px;border:0;background:transparent;color:var(--tv-subtle);cursor:pointer" style-hover="background:var(--tv-hover);color:var(--tv-text)">
+                    <sc-if value="{{ m.f.revealed }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"></path><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"></path><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"></path><path d="m2 2 20 20"></path></svg></sc-if>
+                    <sc-if value="{{ m.f.hidden }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg></sc-if>
+                  </button>
+                </div>
+                <sc-if value="{{ m.f.hasPasswordError }}" hint-placeholder-val="{{ false }}">
+                  <p role="alert" style="margin:0;padding:0 4px;font-size:12px;line-height:16px;font-weight:500;color:var(--tv-error)">{{ m.f.passwordError }}</p>
+                </sc-if>
+              </div>
+              <button type="submit" disabled="{{ m.f.ctaDisabled }}" style="margin-top:4px;display:flex;min-height:58px;width:100%;box-sizing:border-box;align-items:center;justify-content:space-between;border-radius:20px;border:0;background:var(--tv-lime);padding:7px 7px 7px 22px;color:var(--tv-ink);font-family:inherit;opacity:{{ m.f.ctaOpacity }};cursor:{{ m.f.ctaCursor }};transition:background-color .2s,opacity .2s" style-hover="background:var(--tv-lime-pressed)">
+                <span style="font-size:14px;line-height:20px;font-weight:700">{{ m.f.ctaLabel }}</span>
+                <span style="display:flex;width:44px;height:44px;flex-shrink:0;align-items:center;justify-content:center;border-radius:15px;background:var(--tv-ink);color:var(--tv-lime)">
+                  <sc-if value="{{ m.f.pending }}" hint-placeholder-val="{{ false }}">{{ spinner }}</sc-if>
+                  <sc-if value="{{ m.f.idle }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></sc-if>
+                </span>
+              </button>
+              <sc-if value="{{ m.showInvite }}" hint-placeholder-val="{{ true }}">
+                <p style="margin:0;padding:0 4px;text-align:center;font-size:12px;line-height:16px;font-weight:500;color:var(--tv-subtle);text-wrap:pretty">Recebeu um convite? Abra o link enviado ao seu e-mail.</p>
+              </sc-if>
+            </form>
+
+            <div aria-hidden="true" style="min-height:20px;flex:1"></div>
+            <footer style="position:relative;z-index:10;display:flex;min-height:44px;align-items:center;justify-content:center;gap:8px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <img src="assets/tavvi-wordmark.png" alt="" aria-hidden="true" style="width:44px;height:16px;object-fit:contain;opacity:0.5;filter:var(--tv-wm-filter)">
+                <span aria-hidden="true" style="width:3px;height:3px;border-radius:50%;background:var(--tv-border)"></span>
+                <span style="font-size:12px;line-height:16px;font-weight:500;color:var(--tv-subtle-on-dark)">{{ year }}</span>
+              </div>
+            </footer>
+
+            <button type="button" onClick="{{ toggleTheme }}" aria-label="Alternar tema" style="position:absolute;top:24px;right:24px;z-index:20;display:flex;width:54px;height:54px;align-items:center;justify-content:center;border-radius:19px;border:1px solid var(--tv-toggle-line);background:var(--tv-surface);color:var(--tv-text);cursor:pointer" style-hover="background:var(--tv-hover)">
+              <sc-if value="{{ isLight }}" hint-placeholder-val="{{ true }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41-1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></sc-if>
+              <sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></sc-if>
+            </button>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;,&quot;section&quot;:&quot;Geral&quot;},&quot;painelAreas&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Painel&quot;},&quot;painelConvite&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Painel&quot;},&quot;painelMarca&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Painel&quot;}}">
+const LIGHT = {
+  '--tv-lime': '#B2F52F', '--tv-lime-pressed': '#BEF94A', '--tv-lime-soft': 'rgba(178,245,47,0.12)',
+  '--tv-lime-cta-glow': 'rgba(178,245,47,0.55)', '--tv-ink': '#0A0C09',
+  '--tv-hero': '#121510', '--tv-hero-end': '#0E120C', '--tv-on-dark': '#F4F6F0',
+  '--tv-muted-on-dark': '#A9AEA3', '--tv-subtle-on-dark': '#7D8278', '--tv-hero-glow': 'rgba(178,245,47,0.22)',
+  '--tv-on-dark-chip': 'rgba(244,246,240,0.08)',
+  '--tv-screen': '#EEF0E8', '--tv-surface': '#FFFFFF', '--tv-field': '#F5F7F1', '--tv-text': '#11150F',
+  '--tv-muted': '#62675E', '--tv-subtle': '#6B7167', '--tv-border': 'rgba(10,12,9,0.12)',
+  '--tv-toggle-line': 'rgba(10,12,9,0.16)', '--tv-focus': '#557D00', '--tv-ring': 'rgba(85,125,0,0.16)',
+  '--tv-error': '#B42318', '--tv-error-surface': '#FEE4E2', '--tv-warn': '#A06700', '--tv-warn-surface': '#FFF0CC',
+  '--tv-hover': 'rgba(10,12,9,0.06)', '--tv-glow': 'rgba(178,245,47,0.16)',
+  '--tv-card-shadow': '0 30px 60px -22px rgba(10,12,9,0.45)', '--tv-wm-filter': 'brightness(0)',
+};
+const DARK = {
+  ...LIGHT,
+  '--tv-screen': '#0A0C09', '--tv-surface': '#11130F', '--tv-field': '#181B15', '--tv-text': '#F4F6F0',
+  '--tv-muted': '#A9AEA3', '--tv-subtle': '#7D8278', '--tv-border': 'rgba(244,246,240,0.10)',
+  '--tv-toggle-line': 'rgba(244,246,240,0.14)', '--tv-focus': '#B2F52F', '--tv-ring': 'rgba(178,245,47,0.14)',
+  '--tv-error': '#FF8A84', '--tv-error-surface': '#3A1715', '--tv-warn': '#E7AF5C', '--tv-warn-surface': '#382810',
+  '--tv-hover': 'rgba(244,246,240,0.07)', '--tv-glow': 'rgba(178,245,47,0.10)',
+  '--tv-card-shadow': '0 30px 60px -20px rgba(0,0,0,0.8)', '--tv-wm-filter': 'none',
+};
+const BLANK = { email: '', password: '', revealed: false, focus: '', emailError: '', passwordError: '', pending: false, formError: '', caps: false };
+
+class Component extends DCLogic {
+  state = { theme: null, f: {} };
+  timers = [];
+  componentWillUnmount() { this.timers.forEach(clearTimeout); }
+  get theme() { return this.state.theme ?? this.props.theme ?? 'light'; }
+  field(id, s = this.state) { return { ...BLANK, ...(s.f[id] || {}) }; }
+  patch(id, p) { this.setState(s => ({ f: { ...s.f, [id]: { ...this.field(id, s), ...p } } })); }
+
+  submit(id, e) {
+    e.preventDefault();
+    const f = this.field(id);
+    const okEmail = /^\S+@\S+\.\S+$/.test(f.email);
+    const emailError = okEmail ? '' : 'Informe um e-mail válido.';
+    const passwordError = f.password ? '' : 'Informe sua senha.';
+    if (emailError || passwordError) return this.patch(id, { emailError, passwordError, formError: '' });
+    this.patch(id, { pending: true, formError: '', emailError: '', passwordError: '' });
+    this.timers.push(setTimeout(() => this.patch(id, { pending: false, formError: 'E-mail ou senha incorretos.' }), 1400));
+  }
+
+  vm(id, ctaText) {
+    const f = this.field(id);
+    const box = (err, focused) => ({
+      border: err ? 'var(--tv-error)' : focused ? 'var(--tv-focus)' : 'var(--tv-border)',
+      ring: focused ? '0 0 0 4px var(--tv-ring)' : 'none',
+      icon: err ? 'var(--tv-error)' : focused ? 'var(--tv-focus)' : 'var(--tv-subtle)',
+    });
+    const eb = box(f.emailError, f.focus === 'email');
+    const pb = box(f.passwordError, f.focus === 'pass');
+    const disabled = !f.email || !f.password || f.pending;
+    return {
+      ...f,
+      hidden: !f.revealed,
+      idle: !f.pending,
+      hasEmailError: !!f.emailError, hasPasswordError: !!f.passwordError, hasFormError: !!f.formError,
+      emailBorder: eb.border, emailRing: eb.ring, emailIcon: eb.icon,
+      passBorder: pb.border, passRing: pb.ring, passIcon: pb.icon,
+      passType: f.revealed ? 'text' : 'password',
+      revealLabel: f.revealed ? 'Ocultar senha' : 'Mostrar senha',
+      ctaDisabled: disabled, ctaOpacity: disabled ? 0.5 : 1, ctaCursor: disabled ? 'not-allowed' : 'pointer',
+      ctaLabel: f.pending ? 'Entrando…' : ctaText,
+      onEmail: e => this.patch(id, { email: e.target.value, emailError: '', formError: '' }),
+      onPassword: e => this.patch(id, { password: e.target.value, passwordError: '', formError: '' }),
+      onFocusEmail: () => this.patch(id, { focus: 'email' }),
+      onFocusPass: () => this.patch(id, { focus: 'pass' }),
+      onBlur: () => this.patch(id, { focus: '', caps: false }),
+      onKey: e => { const c = e.getModifierState && e.getModifierState('CapsLock'); if (c !== f.caps) this.patch(id, { caps: c }); },
+      onReveal: () => this.patch(id, { revealed: !f.revealed }),
+      onSubmit: e => this.submit(id, e),
+    };
+  }
+
+  renderVals() {
+    const p = this.props;
+    const areas = p.painelAreas ?? true;
+    const invite = p.painelConvite ?? true;
+    const mark = p.painelMarca ?? false;
+    const theme = this.theme;
+    return {
+      vars: theme === 'dark' ? DARK : LIGHT,
+      isLight: theme === 'light', isDark: theme === 'dark',
+      toggleTheme: () => this.setState({ theme: theme === 'dark' ? 'light' : 'dark' }),
+      year: String(new Date().getFullYear()),
+      spinner: React.createElement('span', { 'aria-label': 'Carregando', style: { display: 'block', width: 18, height: 18, boxSizing: 'border-box', borderRadius: '50%', border: '2px solid var(--tv-lime-soft)', borderTopColor: 'var(--tv-lime)', animation: 'tv-spin .8s linear infinite' } }),
+      boards: [
+        { id: '1a', label: 'Atual · /admin/entrar (referência)', badge: 'Console · Acesso de administrador', title: 'Bem-vindo de volta', subtitle: 'Restaurantes, cardápios, mesas e pedidos em um só lugar.', formHint: 'Credenciais de administrador', emailPh: 'voce@tavvi.com', showMark: true, showFooter: true, showAreas: false, showInvite: false, f: this.vm('1a', 'Entrar no console') },
+        { id: '1b', label: 'Proposta · /painel/entrar', badge: 'Painel · Acesso do restaurante', title: 'Painel do restaurante', subtitle: 'Entre para cuidar do seu cardápio.', formHint: 'Conta do restaurante', emailPh: 'voce@seurestaurante.com', showMark: mark, showFooter: false, showAreas: areas, showInvite: invite, f: this.vm('1b', 'Entrar no painel') },
+      ],
+      m: { showMark: mark, showInvite: invite, f: this.vm('1c', 'Entrar no painel') },
+    };
+  }
+}
+</script>
+</body>
+</html>

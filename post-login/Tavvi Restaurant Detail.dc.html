@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="display:flex;flex-direction:column;gap:14px;font-family:'Plus Jakarta Sans',sans-serif">
+  <div style="border-radius:30px;padding:20px;display:flex;flex-direction:column;gap:18px;background:radial-gradient(85% 85% at 100% 100%, rgba(178,245,47,0.16), transparent 70%), linear-gradient(135deg,#121510,#0E120C);box-shadow:inset 0 0 0 1px rgba(244,246,240,0.08)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="width:46px;height:46px;border-radius:14px;background:#181B15;color:#B2F52F;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center">{{ vm.initials }}</span>
+      <span style="{{ vm.heroBadgeStyle }}">{{ vm.statusLabel }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px">
+      <span style="font-size:28px;line-height:32px;font-weight:800;letter-spacing:-0.9px;color:#F4F6F0">{{ vm.name }}<span style="color:#B2F52F">.</span></span>
+      <span style="font-size:13.5px;font-weight:500;color:#A9AEA3">{{ vm.type }}</span>
+    </div>
+  </div>
+
+  <div style="border-radius:22px;background:var(--surface);border:1px solid var(--line);padding:16px 18px 18px;display:flex;flex-direction:column;gap:12px">
+    <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--subtle)">LINK PÚBLICO</span>
+    <div style="height:52px;box-sizing:border-box;border-radius:16px;background:var(--field);padding:0 6px 0 14px;display:flex;align-items:center;gap:10px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+      <span style="flex:1;min-width:0;font:500 12.5px 'JetBrains Mono',monospace;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ vm.publicUrl }}</span>
+      <button type="button" onClick="{{ vm.onCopy }}" style="{{ vm.copyStyle }}">{{ vm.copyLabel }}</button>
+    </div>
+  </div>
+
+  <div style="border-radius:22px;background:var(--surface);border:1px solid var(--line);padding:16px 18px 18px;display:flex;flex-direction:column;gap:12px">
+    <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--subtle)">ENDEREÇO PÚBLICO</span>
+    <label style="height:54px;box-sizing:border-box;border-radius:18px;border:1px solid var(--line);background:var(--field);padding:0 16px;display:flex;align-items:center;gap:2px;font:500 13.5px 'JetBrains Mono',monospace">
+      <span style="color:var(--subtle)">{{ vm.domain }}/</span>
+      <input value="{{ vm.slugDraft }}" onChange="{{ vm.onSlug }}" aria-label="Endereço público" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font:500 13.5px 'JetBrains Mono',monospace;color:var(--text)">
+    </label>
+    <span style="font-size:12.5px;line-height:18px;font-weight:500;color:var(--muted)">{{ vm.slugHelp }}</span>
+    <sc-if value="{{ vm.slugError }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size:12.5px;font-weight:500;color:var(--dangerT)">{{ vm.slugError }}</span></sc-if>
+    <button type="button" onClick="{{ vm.onSaveSlug }}" disabled="{{ vm.slugUnchanged }}" style="{{ vm.saveStyle }}">Alterar endereço</button>
+  </div>
+
+  <div style="border-radius:22px;background:var(--surface);border:1px solid var(--line);padding:16px 18px 18px;display:flex;flex-direction:column;gap:10px">
+    <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--subtle)">SITUAÇÃO</span>
+    <sc-for list="{{ vm.statusOptions }}" as="op" hint-placeholder-count="3">
+      <button type="button" onClick="{{ op.onClick }}" style="{{ op.style }}">
+        <span style="{{ op.radioStyle }}"><span style="{{ op.radioDot }}"></span></span>
+        <span style="flex:1;text-align:left;display:flex;flex-direction:column;gap:2px">
+          <span style="font-size:14px;font-weight:600;color:var(--text)">{{ op.label }}</span>
+          <span style="font-size:12.5px;font-weight:500;color:var(--muted)">{{ op.desc }}</span>
+        </span>
+      </button>
+    </sc-for>
+  </div>
+
+  <div style="border-radius:22px;background:var(--surface);border:1px solid var(--line);padding:4px 18px">
+    <sc-for list="{{ vm.info }}" as="it" hint-placeholder-count="2">
+      <div style="{{ it.style }}">
+        <span style="font-size:13.5px;font-weight:500;color:var(--muted)">{{ it.label }}</span>
+        <span style="font-size:14px;font-weight:600;color:var(--text)">{{ it.value }}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <button type="button" onClick="{{ vm.onRemove }}" style="height:52px;border:none;border-radius:16px;background:transparent;color:var(--dangerT);display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font:600 14px 'Plus Jakarta Sans',sans-serif;transition:background-color .15s" style-hover="background:var(--dangerS);">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>Remover restaurante
+  </button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:420,&quot;height&quot;:900},&quot;vm&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;object&quot;}}"></script>
+</body>
+</html>

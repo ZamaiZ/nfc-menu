@@ -10,6 +10,7 @@ import {
   type InviteKind,
   type InvitePreviewDTO,
   type MemberRole,
+  type PlatformInviteDTO,
 } from '@/domain/invite'
 import { createFromInviteSchema } from '@/domain/restaurant'
 import type { AlvoRevalidacao } from '@/server/revalidate'
@@ -123,6 +124,7 @@ export async function createPlatformInvite(
 ): Promise<CreatedInviteDTO> {
   const data = createPlatformInviteSchema.parse(input)
   const user = await requirePlatformAdmin()
+  await enforceRateLimit('mutation', await rateLimitIdentity())
 
   return insertInvite({
     restaurantId: null,
@@ -155,20 +157,91 @@ export async function createTeamInvite(
   return { ...invite, alvo: await alvoDoRestaurante(data.restaurantId) }
 }
 
-export async function listPlatformInvites(): Promise<InviteDTO[]> {
+type PlatformInviteRow = {
+  id: string
+  email: string | null
+  expires_at: string
+  redeemed_at: string | null
+  revoked_at: string | null
+  created_at: string
+  created_by_email: string
+  redeemed_by_email: string | null
+}
+
+function toPlatformInviteDTO(row: PlatformInviteRow): PlatformInviteDTO {
+  return {
+    id: row.id,
+    email: row.email,
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    redeemedAt: row.redeemed_at,
+    revokedAt: row.revoked_at,
+    createdByEmail: row.created_by_email,
+    redeemedByEmail: row.redeemed_by_email,
+  }
+}
+
+export async function listPlatformInvites(): Promise<PlatformInviteDTO[]> {
   await requirePlatformAdmin()
 
   const supabase = await db()
-  const { data, error } = await supabase
-    .from('invites')
-    .select(INVITE_COLUMNS)
-    .is('restaurant_id', null)
-    .order('created_at', { ascending: false })
+  const { data, error } = await supabase.rpc('list_platform_admin_invites')
 
   if (error) {
     throw new Error(`Não foi possível listar convites: ${error.message}`)
   }
-  return ((data ?? []) as InviteRow[]).map(toInviteDTO)
+  return ((data ?? []) as PlatformInviteRow[])
+    .map(toPlatformInviteDTO)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+}
+
+export async function getPlatformInvite(
+  inviteId: unknown,
+): Promise<PlatformInviteDTO | null> {
+  const id = uuidSchema.parse(inviteId)
+  await requirePlatformAdmin()
+
+  const supabase = await db()
+  const { data, error } = await supabase.rpc('get_platform_admin_invite', {
+    p_invite_id: id,
+  })
+  if (error) throw new Error('NÃ£o foi possÃ­vel carregar o convite.', { cause: error })
+  const row = (data?.[0] ?? null) as PlatformInviteRow | null
+  return row ? toPlatformInviteDTO(row) : null
+}
+
+export async function rotatePlatformInvite(
+  inviteId: unknown,
+): Promise<CreatedInviteDTO> {
+  const id = uuidSchema.parse(inviteId)
+  await requirePlatformAdmin()
+  await enforceRateLimit('mutation', await rateLimitIdentity())
+
+  const token = generateInviteToken()
+  const supabase = await db()
+  const { data, error } = await supabase.rpc('rotate_platform_admin_invite', {
+    p_invite_id: id,
+    p_token_hash: hashInviteTokenForDb(token),
+  })
+  if (error?.code === 'P0002') {
+    throw new UserFacingError('Convite nÃ£o encontrado.')
+  }
+  if (error?.code === 'P0001') {
+    throw new ConflictError('Somente convites pendentes podem gerar um novo link.')
+  }
+  if (error) throw new Error(`NÃ£o foi possÃ­vel gerar novo link: ${error.message}`)
+  const row = data?.[0]
+  if (!row?.id) throw new UserFacingError('Convite nÃ£o encontrado.')
+
+  // The RPC records rotation atomically with revocation/insertion. A second
+  // recordAudit call here would duplicate the audit event.
+  const requestHeaders = await headers()
+  const protocol =
+    requestHeaders.get('x-forwarded-proto') === 'https' ? 'https:' : 'http:'
+  return {
+    id: row.id as string,
+    link: `${originFor('painel', protocol)}/convite/${token}`,
+  }
 }
 
 export async function listInvites(restaurantId: unknown): Promise<InviteDTO[]> {

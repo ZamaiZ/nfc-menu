@@ -104,5 +104,7 @@ export type RestaurantDetailDTO = {
   status: RestaurantStatus
   contact: Record<string, string>
   createdAt: string
+  updatedAt: string
+  segment: string | null
   deletedAt: string | null
 }

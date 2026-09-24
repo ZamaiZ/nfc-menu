@@ -1,14 +1,14 @@
-import { Skeleton } from '@/components/ui/skeleton'
-
 export default function Loading() {
-  return (
-    <main className="tavvi-page">
-      <Skeleton className="mb-8 h-9 w-72" />
-      <div className="space-y-8">
-        {[0, 1, 2].map((block) => (
-          <Skeleton key={block} className="h-48 w-full rounded-[20px]" />
-        ))}
+  return <main className="tv-detail-page" aria-busy="true" aria-label="Carregando restaurante">
+    <div className="tv-detail-back tv-skeleton tv-skeleton-detail-back" aria-hidden="true" />
+    <div className="tv-detail-page-content">
+      <header><span className="tv-skeleton tv-skeleton-detail-eyebrow" /><div className="tv-skeleton tv-skeleton-detail-title" /></header>
+      <div className="tv-detail-stack" aria-hidden="true">
+        <div className="tv-skeleton tv-skeleton-detail-hero" />
+        <div className="tv-skeleton tv-skeleton-detail-block" />
+        <div className="tv-skeleton tv-skeleton-detail-block is-tall" />
+        <div className="tv-skeleton tv-skeleton-detail-info" />
       </div>
-    </main>
-  )
+    </div>
+  </main>
 }
