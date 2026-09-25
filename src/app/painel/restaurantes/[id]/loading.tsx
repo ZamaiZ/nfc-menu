@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 // percebida — só avisa que algo vai mudar de lugar.
 export default function Loading() {
   return (
-    <main className="tavvi-page">
+    <main className="tv-menu-page">
       <div className="mb-8 flex items-center justify-between gap-4">
         <div className="space-y-2">
           <Skeleton className="h-9 w-64" />
@@ -21,6 +21,9 @@ export default function Loading() {
 
       {/* O card de estado da publicação. */}
       <Skeleton className="mb-8 h-20 w-full rounded-[18px]" />
+
+      <div className="mb-4 flex gap-2"><Skeleton className="h-11 w-72 rounded-[15px]" /><Skeleton className="h-11 w-64 rounded-[15px]" /></div>
+      <div className="mb-5 flex gap-2"><Skeleton className="h-9 w-24 rounded-[13px]" /><Skeleton className="h-9 w-28 rounded-[13px]" /><Skeleton className="h-9 w-28 rounded-[13px]" /></div>
 
       <div className="space-y-6">
         {[0, 1].map((secao) => (

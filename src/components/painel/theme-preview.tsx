@@ -40,10 +40,10 @@ function Tela({
       <p className="mb-2 text-center text-micro font-semibold uppercase tracking-[0.12em] text-muted-foreground">
         {rotulo}
       </p>
-      <div className="mx-auto w-full max-w-[176px] overflow-hidden rounded-[22px] border-[5px] border-[#15161a] shadow-[var(--shadow-2)]">
+      <div className="mx-auto w-full max-w-[236px] overflow-hidden rounded-[30px] border-[6px] border-[var(--tv-ink)] shadow-[var(--shadow-2)]">
         <div
           data-density={density}
-          className={`menu h-[344px] overflow-hidden ${ALL_THEME_FONT_VARIABLES}`}
+          className={`menu h-[484px] overflow-hidden ${ALL_THEME_FONT_VARIABLES}`}
           style={vars as React.CSSProperties}
         >
           <div
@@ -110,26 +110,20 @@ function Tela({
 export function ThemePreview({
   theme,
   name,
+  mode,
 }: {
   theme: ThemeChoice
   name: string
+  mode: 'light' | 'dark'
 }) {
   const resolvido = resolveTheme(theme)
 
   return (
-    <div className="grid grid-cols-2 gap-3 pb-2 sm:gap-4">
-      <Tela
-        vars={resolvido.styleLight}
-        rotulo="Claro"
-        name={name}
-        density={resolvido.density}
-      />
-      <Tela
-        vars={resolvido.styleDark}
-        rotulo="Escuro"
-        name={name}
-        density={resolvido.density}
-      />
-    </div>
+    <Tela
+      vars={mode === 'light' ? resolvido.styleLight : resolvido.styleDark}
+      rotulo={mode === 'light' ? 'Claro' : 'Escuro'}
+      name={name}
+      density={resolvido.density}
+    />
   )
 }

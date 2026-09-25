@@ -49,6 +49,7 @@ export function CategorySection({
   index,
   all,
   canEdit,
+  canReorder = true,
   children,
 }: {
   restaurantId: string
@@ -58,6 +59,7 @@ export function CategorySection({
   /** Só administrador edita. Esconder o controle é cortesia: a DAL e a RLS
       barram quem chamar a action na mão. */
   canEdit: boolean
+  canReorder?: boolean
   children: React.ReactNode
 }) {
   const [pending, startTransition] = useTransition()
@@ -118,7 +120,7 @@ export function CategorySection({
     // O fio interno fica só ENTRE os itens — conteúdos de mesmo peso —, que é
     // a regra da Fase 5: fio de 1px em tudo achata, e nada parece estar acima
     // de nada.
-    <Card className="gap-0 overflow-hidden rounded-xl border-border/70 p-0 shadow-[var(--shadow-1)]">
+    <Card id={`categoria-${category.id}`} className="tv-menu-category gap-0 overflow-hidden rounded-[22px] border-border/70 p-0 shadow-[var(--shadow-1)]">
       <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-border/70 bg-muted/15 px-4 py-3">
         <div className="min-w-0">
           <CardTitle className="text-base font-semibold tracking-[-0.015em]">
@@ -138,14 +140,14 @@ export function CategorySection({
 
         {canEdit ? (
           <div className="flex shrink-0 items-center gap-2">
-            <ReorderButtons
+            {canReorder ? <ReorderButtons
               label={`categoria ${category.name}`}
               isFirst={index === 0}
               isLast={index === all.length - 1}
               disabled={pending}
               onUp={() => move(-1)}
               onDown={() => move(1)}
-            />
+            /> : null}
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={

@@ -3,6 +3,16 @@
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   RiExternalLinkLine,
   RiEyeOffLine,
   RiGlobalLine,
@@ -34,6 +44,10 @@ export function PublishBar({
   publicUrl,
   canEdit,
   semMidia,
+  visibleItemsCount,
+  categoriesWithItems,
+  hasBrandImages,
+  onMissingMediaClick,
 }: {
   restaurantId: string
   status: RestaurantStatus
@@ -41,9 +55,15 @@ export function PublishBar({
   canEdit: boolean
   /** Itens visíveis sem foto nem vídeo. Zero libera a publicação. */
   semMidia: number
+  visibleItemsCount: number
+  categoriesWithItems: number
+  hasBrandImages: boolean
+  onMissingMediaClick: () => void
 }) {
   const [pending, startTransition] = useTransition()
   const [situacao, setSituacao] = useState<RestaurantStatus>(status)
+  const [checklistOpen, setChecklistOpen] = useState(false)
+  const [unpublishOpen, setUnpublishOpen] = useState(false)
 
   function alternar(published: boolean) {
     // A action vai DENTRO de startTransition: é o contrato documentado do
@@ -74,7 +94,7 @@ export function PublishBar({
     // nenhuma tela — era uma das 42 peças do sistema de design que o painel
     // ignorava, e é por isso que cada superfície tinha números um pouco
     // diferentes.
-    <Card className="mb-6 flex-row flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border-border/70 p-3 shadow-[var(--shadow-1)] sm:p-4">
+    <Card className="tv-publish-bar mb-6 flex-row flex-wrap items-center gap-x-3 gap-y-2 rounded-[22px] border-border/70 p-3 shadow-[var(--shadow-1)] sm:p-4">
       <span className="flex items-center gap-2 text-small font-semibold">
         <RiGlobalLine
           className={noAr ? 'size-4 text-status-active' : 'size-4 text-muted-foreground'}
@@ -84,6 +104,13 @@ export function PublishBar({
       </span>
 
       <p className="min-w-0 flex-1 text-small text-muted-foreground">{APOIO[situacao]}</p>
+
+      <button type="button" className="tv-publish-checklist-toggle" aria-expanded={checklistOpen} onClick={() => setChecklistOpen((open) => !open)}>Para publicar <span>{checklistOpen ? '−' : '+'}</span></button>
+      <div className={`tv-publish-checklist${checklistOpen ? ' is-open' : ''}`} aria-label="Para publicar">
+        <span><b>{categoriesWithItems}</b> {categoriesWithItems === 1 ? 'categoria com itens' : 'categorias com itens'}</span>
+        <button type="button" className={`tv-publish-media-check ${semMidia ? 'is-warning' : 'is-ready'}`} onClick={onMissingMediaClick}><b>{visibleItemsCount - semMidia}/{visibleItemsCount}</b> itens visíveis com mídia{semMidia > 0 ? ' · Ver sem mídia' : ''}</button>
+        <span className="is-recommendation">{hasBrandImages ? 'Logo e capa adicionadas' : 'Logo e capa · recomendação'}</span>
+      </div>
 
       {/* O endereço público passa a ser COPIÁVEL. Ele é a coisa que o dono
           mais precisa levar para fora do painel — vai na plaquinha, no
@@ -118,9 +145,9 @@ export function PublishBar({
             // Travar o botão é CORTESIA. A regra é o `setPublished`, que
             // recusa de novo no servidor — e quem chamar a action na mão
             // continua barrado.
-            disabled={pending || (!noAr && semMidia > 0)}
+            disabled={pending || (!noAr && (semMidia > 0 || visibleItemsCount === 0))}
             variant={noAr ? 'outline' : 'default'}
-            onClick={() => alternar(!noAr)}
+            onClick={() => noAr ? setUnpublishOpen(true) : alternar(true)}
           >
             {pending ? (
               <Spinner className="size-4" />
@@ -145,6 +172,20 @@ export function PublishBar({
           <strong>Sem foto</strong> na lista abaixo.
         </p>
       ) : null}
+      {noAr && semMidia > 0 ? <p className="tv-publish-reason">{semMidia} itens sem mídia não aparecem no feed público.</p> : null}
+      {!noAr && semMidia === 0 && visibleItemsCount === 0 ? <p className="tv-publish-reason">Adicione ao menos um item visível para publicar.</p> : null}
+      <AlertDialog open={unpublishOpen} onOpenChange={setUnpublishOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Despublicar o cardápio?</AlertDialogTitle>
+            <AlertDialogDescription>Clientes deixarão de encontrar este cardápio até você publicá-lo novamente.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar no ar</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => alternar(false)}>Despublicar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 }

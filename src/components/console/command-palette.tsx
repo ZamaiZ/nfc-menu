@@ -12,7 +12,7 @@ export function CommandPalette({ leaves, open, onClose, onNewInvite }: {
   leaves: ConsoleLeaf[]
   open: boolean
   onClose: () => void
-  onNewInvite: () => void
+  onNewInvite?: () => void
 }) {
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
@@ -23,7 +23,7 @@ export function CommandPalette({ leaves, open, onClose, onNewInvite }: {
   const rows = useMemo(() => {
     const pages = leaves.map((leaf) => ({ key: leaf.key, label: leaf.label, type: 'Página', href: leaf.href, leaf }))
     const actions = [
-      { key: 'new-invite', label: 'Novo convite', type: 'Ação', action: onNewInvite },
+      ...(onNewInvite ? [{ key: 'new-invite', label: 'Novo convite', type: 'Ação', action: onNewInvite }] : []),
       { key: 'theme', label: 'Alternar tema', type: 'Ação', action: () => setTheme(theme === 'dark' ? 'light' : 'dark') },
     ]
     return [...pages, ...actions].filter((item) => item.label.toLowerCase().includes(query.trim().toLowerCase()))

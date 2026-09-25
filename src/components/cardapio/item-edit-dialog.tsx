@@ -36,6 +36,7 @@ import type { OwnerMenuCategoryDTO, OwnerMenuItemDTO } from '@/domain/menu'
 import { updateItemAction } from '@/server/actions/menu'
 import { MediaEditor, type MediaEditorHandle } from './media-editor'
 import { VariantsEditor } from './variants-editor'
+import { DietaryTagsInput } from './dietary-tags-input'
 
 export function ItemEditDialog({
   item,
@@ -50,9 +51,12 @@ export function ItemEditDialog({
 }) {
   const [visible, setVisible] = useState(item.isVisible)
   const [available, setAvailable] = useState(item.isAvailable)
+  const [dietaryTags, setDietaryTags] = useState(item.dietaryTags)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [discardAlertOpen, setDiscardAlertOpen] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const gripTouchY = useRef<number | null>(null)
   const editorRef = useRef<MediaEditorHandle>(null)
 
   async function submit(formData: FormData) {
@@ -74,7 +78,7 @@ export function ItemEditDialog({
       name: formData.get('name'),
       description: formData.get('description') || undefined,
       basePriceCents: cents,
-      dietaryTags: item.dietaryTags,
+      dietaryTags,
       isVisible: visible,
       isAvailable: available,
     })
@@ -123,15 +127,19 @@ export function ItemEditDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="flex h-[min(860px,calc(100dvh-1.5rem))] max-h-[calc(100dvh-1.5rem)] w-[min(960px,calc(100vw-1.5rem))] max-w-[960px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[960px] max-sm:h-[calc(100dvh-1rem)] max-sm:max-h-[calc(100dvh-1rem)] max-sm:max-w-[calc(100%-1rem)]">
+        <DialogContent className={`tv-item-sheet flex h-[min(860px,calc(100dvh-1.5rem))] max-h-[calc(100dvh-1.5rem)] w-[min(560px,calc(100vw-1.5rem))] max-w-[560px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[560px] max-sm:h-[calc(100dvh-1rem)] max-sm:max-h-[calc(100dvh-1rem)] max-sm:max-w-[calc(100%-1rem)]${expanded ? ' is-expanded' : ''}`}>
           <DialogHeader className="shrink-0 border-b border-border px-5 py-4 pr-14 sm:px-6">
+            <div className="tv-sheet-grip" onTouchStart={(event) => { gripTouchY.current = event.touches[0]?.clientY ?? null }} onTouchEnd={(event) => { const start = gripTouchY.current; gripTouchY.current = null; if (start === null) return; const delta = start - event.changedTouches[0].clientY; if (delta > 70) setExpanded(true); else if (delta < -110) handleOpenChange(false) }}>
+              <span aria-hidden="true" />
+              <button type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? 'Reduzir' : 'Expandir'}</button>
+            </div>
             <DialogTitle>Editar item</DialogTitle>
             <DialogDescription>{item.name}</DialogDescription>
           </DialogHeader>
 
           <form action={submit} className="flex min-h-0 flex-1 flex-col">
-            <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-              <section className="border-b border-border p-5 sm:p-6 lg:border-r lg:border-b-0">
+            <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-1">
+              <section className="order-2 border-b border-border p-5 sm:p-6">
                 <div className="mb-4">
                   <h3 className="text-sm font-semibold">Dados do item</h3>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -143,6 +151,11 @@ export function ItemEditDialog({
                   <Field>
                     <FieldLabel htmlFor="edit-name">Nome</FieldLabel>
                     <Input id="edit-name" name="name" defaultValue={item.name} required />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>Destaques e restrições</FieldLabel>
+                    <DietaryTagsInput value={dietaryTags} onChange={setDietaryTags} />
                   </Field>
 
                   <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem] lg:grid-cols-1 xl:grid-cols-[minmax(0,1fr)_8rem]">
@@ -209,8 +222,8 @@ export function ItemEditDialog({
                 </FieldGroup>
               </section>
 
-              <section className="space-y-6 bg-surface-1/45 p-5 sm:p-6">
-                <div>
+              <section className="order-1 flex flex-col gap-6 bg-surface-1/45 p-5 sm:p-6">
+                <div className="order-2">
                   <div className="mb-3">
                     <h3 className="text-sm font-semibold">Variações</h3>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -220,7 +233,7 @@ export function ItemEditDialog({
                   <VariantsEditor itemId={item.id} variants={item.variants} />
                 </div>
 
-                <div className="border-t border-border pt-5">
+                <div className="order-1 border-b border-border pb-5">
                   <div className="mb-3">
                     <h3 className="text-sm font-semibold">Fotos e vídeos</h3>
                     <p className="mt-1 text-xs text-muted-foreground">

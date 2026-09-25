@@ -32,11 +32,13 @@ export type CategoryDialogData = {
 export function CategoryDialog({
   restaurantId,
   category,
+  initialName,
   open,
   onOpenChange,
 }: {
   restaurantId: string
   category?: CategoryDialogData
+  initialName?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
@@ -75,7 +77,7 @@ export function CategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="tv-bottom-sheet-dialog">
         <DialogHeader>
           <DialogTitle>
             {category ? 'Editar categoria' : 'Nova categoria'}
@@ -92,7 +94,7 @@ export function CategoryDialog({
               <Input
                 id="cat-name"
                 name="name"
-                defaultValue={category?.name}
+                defaultValue={category?.name ?? initialName}
                 placeholder="Entradas"
                 autoFocus
                 required

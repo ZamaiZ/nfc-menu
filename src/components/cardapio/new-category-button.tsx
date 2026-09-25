@@ -11,10 +11,12 @@ import { CategoryDialog } from './category-dialog'
 export function NewCategoryButton({
   restaurantId,
   label = 'Nova categoria',
+  initialName,
   variant = 'default',
 }: {
   restaurantId: string
   label?: string
+  initialName?: string
   variant?: 'default' | 'outline'
 }) {
   const [open, setOpen] = useState(false)
@@ -27,6 +29,7 @@ export function NewCategoryButton({
       </Button>
       <CategoryDialog
         restaurantId={restaurantId}
+        initialName={initialName}
         open={open}
         onOpenChange={setOpen}
       />

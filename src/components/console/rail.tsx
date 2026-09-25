@@ -2,13 +2,13 @@
 
 import Link, { useLinkStatus } from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LuMail, LuPanelLeftClose, LuSearch, LuStore } from 'react-icons/lu'
+import { LuBookOpen, LuContact, LuMail, LuPalette, LuPanelLeftClose, LuSearch, LuStore, LuUsers } from 'react-icons/lu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { ConsoleLeaf } from './console-config'
 import { isConsoleRouteActive } from './console-config'
 import { setRailMode, type RailMode } from './rail-store'
 
-const ICONS = { mail: LuMail, store: LuStore } as const
+const ICONS = { mail: LuMail, store: LuStore, menu: LuBookOpen, palette: LuPalette, contact: LuContact, team: LuUsers } as const
 
 function PendingRing() {
   const { pending } = useLinkStatus()
@@ -19,6 +19,9 @@ export function Rail({
   leaves,
   mode,
   email,
+  userDescription,
+  contextLabel,
+  contextDescription,
   onSearch,
   onAccount,
   onNavigate,
@@ -26,6 +29,9 @@ export function Rail({
   leaves: ConsoleLeaf[]
   mode: RailMode
   email: string | null
+  userDescription: string | null
+  contextLabel: string | null
+  contextDescription: string | null
   onSearch: () => void
   onAccount: () => void
   onNavigate: (leaf: ConsoleLeaf) => void
@@ -36,7 +42,7 @@ export function Rail({
     <aside className={`tv-console-rail${expanded ? ' is-pinned' : ''}`}>
       <div className="tv-rail-brand">
         <span className="tv-brand-tile"><img src="/brand/tavvi-brandmark.png" alt="" /></span>
-        {expanded && <span className="tv-brand-copy"><small>TAVVI</small><strong>Console</strong></span>}
+        {expanded && <span className="tv-brand-copy"><small>{contextLabel ?? 'TAVVI'}</small><strong>{contextDescription ?? 'Console'}</strong></span>}
       </div>
       <button type="button" onClick={onSearch} className="tv-rail-search" aria-label="Buscar página" title={!expanded ? 'Buscar página' : undefined}><LuSearch />{expanded && <><span>Buscar página</span><kbd>Ctrl + K</kbd></>}</button>
       <div className="tv-rail-divider" />
@@ -68,7 +74,7 @@ export function Rail({
       </nav>
       <div className="tv-rail-bottom">
         <button type="button" className="tv-rail-control" aria-label={expanded ? 'Recolher menu' : 'Fixar menu aberto'} onClick={() => setRailMode(expanded ? 'collapsed' : 'pinned')}><LuPanelLeftClose className={!expanded ? 'is-mirrored' : ''} />{expanded && <><span>Recolher menu</span><kbd>Ctrl + B</kbd></>}</button>
-        <button type="button" className={`tv-rail-account${expanded ? ' is-expanded' : ''}`} aria-label={`Conta${email ? `: ${email}` : ''}`} onClick={onAccount}><span className="tv-rail-initial">{email?.trim().slice(0, 1).toUpperCase() || 'A'}</span>{expanded && <span className="tv-rail-link-label"><strong>{email ?? 'Administrador'}</strong><small>Administrador da plataforma</small></span>}</button>
+        <button type="button" className={`tv-rail-account${expanded ? ' is-expanded' : ''}`} aria-label={`Conta${email ? `: ${email}` : ''}`} onClick={onAccount}><span className="tv-rail-initial">{email?.trim().slice(0, 1).toUpperCase() || 'A'}</span>{expanded && <span className="tv-rail-link-label"><strong>{email ?? 'Conta'}</strong><small>{userDescription ?? 'Administrador da plataforma'}</small></span>}</button>
       </div>
     </aside>
   )

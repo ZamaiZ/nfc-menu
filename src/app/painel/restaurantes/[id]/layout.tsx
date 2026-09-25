@@ -1,6 +1,10 @@
+import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
-import { TavviShell } from '@/components/shell/tavvi-shell'
 import { getRestaurantNavigation } from '@/components/shell/navigation'
+import type { NavGroup } from '@/components/shell/navigation.types'
+import { ConsoleShell } from '@/components/console/console-shell'
+import { getRestaurantConsoleConfig } from '@/components/console/console-config'
+import { MEMBER_ROLE_LABELS } from '@/domain/invite'
 import { uuidSchema } from '@/domain/common'
 import { getCurrentUser } from '@/server/dal/auth'
 import { getRestaurantWorkspace } from '@/server/dal/restaurant-workspace'
@@ -23,18 +27,20 @@ export default async function RestauranteLayout({
     getCurrentUser(),
   ])
   if (!workspace) notFound()
+  const cookieStore = await cookies()
+  const initialRail = cookieStore.get('tv_rail')?.value === 'pinned' ? 'pinned' : 'collapsed'
+  const navigation = getRestaurantNavigation(parsed.data, workspace.canEdit)
+  const config = getRestaurantConsoleConfig({
+    email: user?.email ?? null,
+    roleLabel: workspace.role ? MEMBER_ROLE_LABELS[workspace.role] : 'Membro',
+    restaurantName: workspace.restaurant.name,
+    homeHref: `/restaurantes/${parsed.data}`,
+    navigation: navigation.filter((item): item is NavGroup => item.kind === 'group'),
+  })
 
   return (
-    <TavviShell
-      config={{
-        homeHref: `/restaurantes/${parsed.data}`,
-        userLabel: user?.email ?? null,
-        contextLabel: workspace.restaurant.name,
-        contextDescription: 'Painel do restaurante',
-        items: getRestaurantNavigation(parsed.data, workspace.canEdit),
-      }}
-    >
+    <ConsoleShell config={config} initialRail={initialRail}>
       {children}
-    </TavviShell>
+    </ConsoleShell>
   )
 }

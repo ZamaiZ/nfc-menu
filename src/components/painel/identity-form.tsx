@@ -4,7 +4,6 @@ import { useMemo, useState, useTransition } from 'react'
 import {
   RiArrowGoBackLine,
   RiCheckLine,
-  RiCloseLine,
   RiSmartphoneLine,
 } from 'react-icons/ri'
 import { BrandImages } from '@/components/painel/brand-images'
@@ -22,7 +21,7 @@ import {
   type ThemeChoice,
   type ThemePresetId,
 } from '@/domain/theme'
-import { fitContrast } from '@/lib/color'
+import { fitContrast, hexToOklch, oklchToHex } from '@/lib/color'
 import { isBaseInRange, PRESETS } from '@/lib/theme/presets'
 import { PISOS } from '@/lib/theme/resolve'
 import { updateIdentityAction } from '@/server/actions/restaurants'
@@ -52,18 +51,45 @@ export function IdentityForm({
       ? inicial.data
       : { preset: 'grao', base: null, accent: null, density: 'confortavel' },
   )
+  const [salvo, setSalvo] = useState(escolha)
   const [segmento, setSegmento] = useState<string | null>(segment)
+  const [segmentoSalvo, setSegmentoSalvo] = useState(segment)
   const [tocouTema, setTocouTema] = useState(false)
   // O aceite da derivação é por MUDANÇA, não por sessão: quem abre a tela e
   // não mexe na cor não é interrogado de novo sobre uma escolha que já fez.
   const [tocouAccent, setTocouAccent] = useState(false)
   const [accentAceito, setAccentAceito] = useState(false)
   const [pending, startTransition] = useTransition()
-  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(true)
+  const [previewMode, setPreviewMode] = useState<'light' | 'dark'>('light')
 
   const preset = PRESETS[escolha.preset]
   const baseAtual = escolha.base ?? preset.light.base
   const accentAtual = escolha.accent ?? preset.light.accent
+  const baseOptions = useMemo(() => {
+    const { l, c } = preset.baseRange
+    const hue = hexToOklch(preset.light.base).h
+    const options = new Set<string>([preset.light.base])
+    for (let lightness = l[0]; lightness <= l[1] + 0.0001; lightness += 0.035) {
+      for (let chroma = c[0]; chroma <= c[1] + 0.0001; chroma += 0.012) {
+        const color = oklchToHex({ l: lightness, c: chroma, h: hue })
+        if (isBaseInRange(escolha.preset, color)) options.add(color)
+      }
+    }
+    return [...options]
+  }, [escolha.preset, preset])
+  const accentOptions = useMemo(() => {
+    const source = hexToOklch(preset.light.accent)
+    const candidates = new Set<string>()
+    for (const hueDelta of [-30, -20, -10, 0, 10, 20, 30]) {
+      for (const lightDelta of [-0.08, 0, 0.08]) {
+        const color = oklchToHex({ l: Math.max(0.2, Math.min(0.88, source.l + lightDelta)), c: source.c, h: (source.h + hueDelta + 360) % 360 })
+        if (fitContrast(color, baseAtual, PISOS.accent) && fitContrast(color, preset.dark.base, PISOS.accent)) candidates.add(color)
+      }
+    }
+    if (fitContrast(accentAtual, baseAtual, PISOS.accent) && fitContrast(accentAtual, preset.dark.base, PISOS.accent)) candidates.add(accentAtual)
+    return [...candidates]
+  }, [accentAtual, baseAtual, preset])
 
   // As duas conferências do servidor, repetidas aqui. Isto é conveniência —
   // a regra é o `updateIdentity`, que roda de novo e recusa. Mas dizer
@@ -85,6 +111,7 @@ export function IdentityForm({
   )
 
   const accentValido = derivado.claro !== null && derivado.escuro !== null
+  const temMudancas = JSON.stringify(escolha) !== JSON.stringify(salvo) || segmento !== segmentoSalvo
 
   // Só pede aceite quando a derivação de fato MUDOU a cor. Cor que já serve
   // nas duas faces passa direto: pedir confirmação do que não mudou é ruído
@@ -126,6 +153,8 @@ export function IdentityForm({
         theme: escolha,
       })
       if (result.ok) {
+        setSalvo(escolha)
+        setSegmentoSalvo(segmento)
         toast.add({ title: 'Identidade salva', type: 'success' })
         onSaved?.()
       } else {
@@ -135,8 +164,8 @@ export function IdentityForm({
   }
 
   return (
-    <div className="relative">
-      <div className="tavvi-surface max-w-[840px] space-y-6 p-5 sm:p-6">
+    <div className="tv-identity-layout">
+      <div className="tavvi-surface space-y-6 p-5 sm:p-6">
         {/* Logo e capa gravam SOZINHAS, na hora do envio — não esperam o
             "Salvar identidade". Envio de arquivo já é uma confirmação por si,
             e amarrar o arquivo a um botão de salvar criaria um estado onde o
@@ -196,6 +225,7 @@ export function IdentityForm({
                       />
                     ))}
                   </span>
+                  <span aria-hidden="true" className="text-lg leading-none" style={{ color: p.light.accent, fontFamily: p.displayFont }}>Aa</span>
                   <span className="text-card font-semibold">{p.label}</span>
                   {sugerido ? (
                     <span className="text-micro font-semibold uppercase tracking-wider text-primary">
@@ -214,15 +244,18 @@ export function IdentityForm({
         <div className="grid gap-6 sm:grid-cols-2">
           <Field>
             <FieldLabel htmlFor="base">Cor de fundo</FieldLabel>
-            <input
-              id="base"
-              type="color"
-              value={baseAtual}
-              onChange={(event) =>
-                setEscolha((a) => ({ ...a, base: event.target.value }))
-              }
-              className="h-11 w-full cursor-pointer rounded-md border border-input bg-transparent p-1"
-            />
+            <div className="tv-theme-colors" role="group" aria-label="Opções de cor de fundo">
+              {baseOptions.map((color) => <button
+                key={color}
+                type="button"
+                title={color}
+                aria-label={`Cor de fundo ${color}`}
+                aria-pressed={baseAtual.toLowerCase() === color.toLowerCase()}
+                onClick={() => setEscolha((current) => ({ ...current, base: color === preset.light.base ? null : color }))}
+                style={{ backgroundColor: color }}
+              />)}
+            </div>
+            <p className="font-mono text-xs text-muted-foreground">{baseAtual}</p>
             <FieldDescription>
               {baseValida ? (
                 'Dentro da faixa deste tema.'
@@ -237,17 +270,22 @@ export function IdentityForm({
 
           <Field>
             <FieldLabel htmlFor="accent">Cor de destaque</FieldLabel>
-            <input
-              id="accent"
-              type="color"
-              value={accentAtual}
-              onChange={(event) => {
-                setTocouAccent(true)
-                setAccentAceito(false)
-                setEscolha((a) => ({ ...a, accent: event.target.value }))
-              }}
-              className="h-11 w-full cursor-pointer rounded-md border border-input bg-transparent p-1"
-            />
+            <div className="tv-theme-colors" role="group" aria-label="Cores de destaque deste tema">
+              {accentOptions.map((color) => <button
+                key={color}
+                type="button"
+                title={color}
+                aria-label={`Cor de destaque ${color}`}
+                aria-pressed={accentAtual.toLowerCase() === color.toLowerCase()}
+                onClick={() => {
+                  setTocouAccent(true)
+                  setAccentAceito(false)
+                  setEscolha((current) => ({ ...current, accent: color === preset.light.accent ? null : color }))
+                }}
+                style={{ backgroundColor: color }}
+              />)}
+            </div>
+            <p className="font-mono text-xs text-muted-foreground">{accentAtual}</p>
             <FieldDescription>
               {accentValido ? (
                 'O matiz é mantido nas duas versões do cardápio; só a luminosidade se ajusta quando precisa.'
@@ -331,11 +369,14 @@ export function IdentityForm({
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="tv-identity-savebar">
+          <span>{temMudancas ? 'Alterações pendentes' : 'Tudo salvo'}</span>
+          <div className="flex flex-wrap gap-2">
           <Button
             onClick={salvar}
             disabled={
               pending ||
+              !temMudancas ||
               !baseValida ||
               !accentValido ||
               (precisaAceite && !accentAceito)
@@ -356,50 +397,25 @@ export function IdentityForm({
             <RiArrowGoBackLine className="size-4" />
             Restaurar as cores do tema
           </Button>
+          </div>
         </div>
       </div>
 
-      <div className="fixed right-4 bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-30 flex flex-col items-end md:right-6 md:bottom-6">
-        {previewOpen ? (
-          <section
-            id="identity-preview-panel"
-            aria-label="Pré-visualização do cardápio"
-            className="w-[min(480px,calc(100vw-2rem))] max-h-[calc(100dvh-10rem)] overflow-y-auto rounded-2xl border border-border bg-popover/95 p-4 shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none md:max-h-[calc(100dvh-7rem)]"
-          >
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold">Pré-visualização</p>
-                <p className="text-xs text-muted-foreground">
-                  Claro e escuro, sem reduzir a área de edição.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setPreviewOpen(false)}
-                aria-label="Recolher pré-visualização"
-              >
-                <RiCloseLine className="size-4" />
-              </Button>
-            </div>
-            <ThemePreview theme={escolha} name={name} />
-          </section>
-        ) : null}
-
-        <Button
-          type="button"
-          variant={previewOpen ? 'secondary' : 'default'}
-          size="lg"
-          aria-expanded={previewOpen}
-          aria-controls="identity-preview-panel"
-          onClick={() => setPreviewOpen((current) => !current)}
-          className="mt-3 rounded-full px-4 shadow-lg"
-        >
-          <RiSmartphoneLine className="size-4" />
-          {previewOpen ? 'Recolher prévia' : 'Ver prévia'}
-        </Button>
-      </div>
+      <aside className={`tv-identity-preview${previewOpen ? ' is-open' : ''}`}>
+        <div className="tv-identity-preview-head">
+          <div><h2>Prévia do cardápio</h2><p>Atualizada conforme você edita o tema.</p></div>
+          <Button type="button" variant="outline" size="sm" onClick={() => setPreviewOpen((open) => !open)} aria-expanded={previewOpen} aria-controls="identity-preview-panel">
+            <RiSmartphoneLine className="size-4" />{previewOpen ? 'Recolher' : 'Ver'}
+          </Button>
+        </div>
+        <div id="identity-preview-panel" className="tv-identity-preview-body">
+          <div className="tv-identity-mode" role="group" aria-label="Aparência da prévia">
+            <button type="button" aria-pressed={previewMode === 'light'} onClick={() => setPreviewMode('light')}>Claro</button>
+            <button type="button" aria-pressed={previewMode === 'dark'} onClick={() => setPreviewMode('dark')}>Escuro</button>
+          </div>
+          <ThemePreview theme={escolha} name={name} mode={previewMode} />
+        </div>
+      </aside>
     </div>
   )
 }

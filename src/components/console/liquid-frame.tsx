@@ -31,11 +31,13 @@ export function LiquidFrame({
   children,
   initialLeft,
   activeIndex,
+  collapsedWidth,
   onReady,
 }: {
   children: React.ReactNode
   initialLeft: number
   activeIndex: number
+  collapsedWidth: number
   onReady: (moveTo: (left: number, cy: number, instant?: boolean) => void) => void
 }) {
   const pathRef = useRef<SVGPathElement>(null)
@@ -66,7 +68,7 @@ export function LiquidFrame({
       <svg className="tv-console-liquid" aria-hidden="true" style={{ opacity: measured ? 1 : 0 }}>
         <path ref={pathRef} d={pocketPath(1440, 900, initialLeft, activeCy, 28, 28, initialLeft - M)} />
       </svg>
-      <aside ref={railRef} className="tv-console-rail-space" />
+      <aside ref={railRef} className="tv-console-rail-space" style={{ width: collapsedWidth }} />
       <div ref={mainRef} className="tv-console-main">{children}</div>
     </div>
   )

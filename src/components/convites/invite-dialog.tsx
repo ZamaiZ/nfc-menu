@@ -6,7 +6,6 @@ import {
   RiCheckLine,
   RiFileCopyLine,
   RiMailAddLine,
-  RiTimeLine,
 } from 'react-icons/ri'
 import { Button } from '@/components/ui/button'
 import {
@@ -106,7 +105,7 @@ export function InviteDialog(props: InviteDialogProps) {
         {mode === 'platform' ? 'Novo convite' : 'Convidar alguém'}
       </DialogTrigger>
 
-      <DialogContent className="rounded-[24px] p-6 sm:p-7">
+      <DialogContent className={`${mode === 'team' ? 'tv-bottom-sheet-dialog' : ''} rounded-[24px] p-6 sm:p-7`}>
         {link === null ? (
           <>
             <DialogHeader>
@@ -124,17 +123,15 @@ export function InviteDialog(props: InviteDialogProps) {
               {mode === 'team' ? (
                 <Field>
                   <FieldLabel htmlFor="role">Papel</FieldLabel>
-                  <NativeSelect id="role" name="role" defaultValue="waiter">
-                    {(
-                      Object.keys(MEMBER_ROLE_LABELS) as MemberRole[]
-                    ).map((role) => (
-                      <option key={role} value={role}>
-                        {MEMBER_ROLE_LABELS[role]}
-                      </option>
-                    ))}
-                  </NativeSelect>
+                  <div className="tv-invite-roles">
+                    {(Object.keys(MEMBER_ROLE_LABELS) as MemberRole[]).map((role) => <label key={role}>
+                      <input type="radio" name="role" value={role} defaultChecked={role === 'waiter'} />
+                      <strong>{MEMBER_ROLE_LABELS[role]}</strong>
+                      <small>{MEMBER_ROLE_HINTS[role]}</small>
+                    </label>)}
+                  </div>
                   <FieldDescription>
-                    {MEMBER_ROLE_HINTS.admin} Os demais papéis só consultam.
+                    Administradores podem editar o restaurante; os demais papéis consultam.
                   </FieldDescription>
                 </Field>
               ) : null}
@@ -148,19 +145,15 @@ export function InviteDialog(props: InviteDialogProps) {
                 description="Opcional. Preenchido, o link só funciona para quem entrar com esse e-mail."
               />
 
-              <IconField
-                id="expiresInDays"
-                name="expiresInDays"
-                type="number"
-                min={1}
-                max={30}
-                defaultValue={7}
-                label="Prazo para aceitar, em dias"
-                icon={<RiTimeLine />}
-                // Este texto existe porque "validade" soa como assinatura, e
-                // essa confusão foi o que originou a fase.
-                description="Depois desse prazo o link para de funcionar e você emite outro. Quem aceitar dentro do prazo não perde o acesso depois."
-              />
+              <Field>
+                <FieldLabel htmlFor="expiresInDays">Prazo para aceitar</FieldLabel>
+                <NativeSelect id="expiresInDays" name="expiresInDays" defaultValue="7">
+                  <option value="1">1 dia</option>
+                  <option value="7">7 dias</option>
+                  <option value="30">30 dias</option>
+                </NativeSelect>
+                <FieldDescription>Depois desse prazo o link para de funcionar. Quem aceitar dentro do prazo não perde o acesso depois.</FieldDescription>
+              </Field>
 
               {error ? (
                 <p role="alert" className="text-small text-destructive">

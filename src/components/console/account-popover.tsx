@@ -11,7 +11,7 @@ const themeOptions: { value: Theme; label: string; Icon: typeof LuSun }[] = [
   { value: 'dark', label: 'Escuro', Icon: LuMoon },
 ]
 
-export function AccountPopover({ email, onClose }: { email: string | null; onClose: () => void }) {
+export function AccountPopover({ email, description, onClose }: { email: string | null; description: string | null; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const [pending, startTransition] = useTransition()
@@ -39,7 +39,7 @@ export function AccountPopover({ email, onClose }: { email: string | null; onClo
     <div ref={ref} role="dialog" aria-label="Conta" className="tv-account-popover">
       <div className="tv-account-head">
         <span className="tv-account-avatar">{initial}</span>
-        <span className="tv-account-user"><strong>{email ?? 'Administrador'}</strong><small>Administrador da plataforma</small></span>
+        <span className="tv-account-user"><strong>{email ?? 'Conta'}</strong><small>{description ?? 'Administrador da plataforma'}</small></span>
         <button ref={closeRef} type="button" className="tv-icon-button" aria-label="Fechar conta" onClick={onClose}><LuX /></button>
       </div>
       <div className="tv-account-section">

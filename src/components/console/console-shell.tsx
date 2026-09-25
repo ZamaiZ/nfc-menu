@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { CommandPalette } from './command-palette'
 import { AccountPopover } from './account-popover'
@@ -9,7 +9,7 @@ import { MobileDock } from './mobile-dock'
 import { Rail } from './rail'
 import { InviteSheet } from './invites/invite-sheet'
 import { toggleRailMode, useRailMode, type RailMode } from './rail-store'
-import { isConsoleRouteActive, type ConsoleLeaf } from './console-config'
+import { isConsoleRouteActive, type ConsoleConfig, type ConsoleLeaf } from './console-config'
 
 type ConsoleActionValue = { openInvite: (email?: string, inviteId?: string) => void }
 const ConsoleActionsContext = createContext<ConsoleActionValue>({ openInvite: () => undefined })
@@ -20,17 +20,18 @@ export function useConsoleActions() {
 
 export function ConsoleShell({
   children,
-  leaves,
-  email,
+  config,
   initialRail,
-  counts,
 }: {
   children: ReactNode
-  leaves: ConsoleLeaf[]
-  email: string | null
+  config: ConsoleConfig
   initialRail: RailMode
-  counts: { pendingInvites: number; restaurants: number }
 }) {
+  const leaves = config.leaves
+  const email = config.userLabel
+  const description = config.userDescription ?? null
+  const counts = config.counts ?? { pendingInvites: 0, restaurants: 0 }
+  const widths = config.railWidths ?? { collapsed: 80, pinned: 272 }
   const pathname = usePathname()
   const mode = useRailMode(initialRail)
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -60,24 +61,24 @@ export function ConsoleShell({
   }, [mode])
 
   useEffect(() => {
-    moveRef.current(mode === 'pinned' ? 272 : 80, 196 + 64 * activeIndex)
-  }, [activeIndex, mode])
+    moveRef.current(mode === 'pinned' ? widths.pinned : widths.collapsed, 196 + 64 * activeIndex)
+  }, [activeIndex, mode, widths.collapsed, widths.pinned])
 
   const navigate = useCallback((leaf: ConsoleLeaf) => {
     const targetIndex = Math.max(0, leaves.findIndex((item) => item.key === leaf.key))
-    moveRef.current(mode === 'pinned' ? 272 : 80, 196 + 64 * targetIndex)
-  }, [leaves, mode])
+    moveRef.current(mode === 'pinned' ? widths.pinned : widths.collapsed, 196 + 64 * targetIndex)
+  }, [leaves, mode, widths.collapsed, widths.pinned])
 
   return <ConsoleActionsContext.Provider value={context}>
-    <div className="tv-console-root">
-      <LiquidFrame initialLeft={initialRail === 'pinned' ? 272 : 80} activeIndex={activeIndex} onReady={setMove}>
-        <Rail leaves={leaves} mode={mode} email={email} onSearch={() => setPaletteOpen(true)} onAccount={() => setAccountOpen((open) => !open)} onNavigate={navigate} />
+    <div className="tv-console-root" style={{ '--tv-rail-collapsed-width': `${widths.collapsed}px`, '--tv-rail-pinned-width': `${widths.pinned}px` } as CSSProperties}>
+      <LiquidFrame initialLeft={initialRail === 'pinned' ? widths.pinned : widths.collapsed} activeIndex={activeIndex} collapsedWidth={widths.collapsed} onReady={setMove}>
+        <Rail leaves={leaves} mode={mode} email={email} userDescription={description} contextLabel={config.contextLabel ?? null} contextDescription={config.contextDescription ?? null} onSearch={() => setPaletteOpen(true)} onAccount={() => setAccountOpen((open) => !open)} onNavigate={navigate} />
         {children}
       </LiquidFrame>
-      <MobileDock leaves={leaves} email={email} counts={counts} />
-      <CommandPalette leaves={leaves} open={paletteOpen} onClose={() => setPaletteOpen(false)} onNewInvite={() => openInvite()} />
-      {accountOpen && <><button className="tv-overlay-scrim" aria-label="Fechar conta" onClick={() => setAccountOpen(false)} /><AccountPopover email={email} onClose={() => setAccountOpen(false)} /></>}
-      <InviteSheet request={inviteRequest} onClose={() => setInviteRequest(null)} />
+      <MobileDock leaves={leaves} email={email} description={description} counts={counts} homeHref={config.homeHref ?? '/'} />
+      <CommandPalette leaves={leaves} open={paletteOpen} onClose={() => setPaletteOpen(false)} onNewInvite={config.showNewInvite ? () => openInvite() : undefined} />
+      {accountOpen && <><button className="tv-overlay-scrim" aria-label="Fechar conta" onClick={() => setAccountOpen(false)} /><AccountPopover email={email} description={description} onClose={() => setAccountOpen(false)} /></>}
+      {config.showNewInvite && <InviteSheet request={inviteRequest} onClose={() => setInviteRequest(null)} />}
     </div>
   </ConsoleActionsContext.Provider>
 }

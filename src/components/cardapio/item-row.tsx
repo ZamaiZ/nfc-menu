@@ -1,6 +1,6 @@
 'use client'
 
-import { useOptimistic, useState, useTransition } from 'react'
+import { useOptimistic, useRef, useState, useTransition } from 'react'
 import {
   RiDeleteBinLine,
   RiImageAddLine,
@@ -34,6 +34,7 @@ import {
   deleteItemAction,
   reorderItemsAction,
   setItemAvailabilityAction,
+  updateItemAction,
 } from '@/server/actions/menu'
 import type { ActionResult } from '@/server/actions/result'
 import { ItemEditDialog } from './item-edit-dialog'
@@ -46,6 +47,9 @@ export function ItemRow({
   all,
   categories,
   canEdit,
+  canReorder = true,
+  reorderMode = false,
+  presentation = 'list',
 }: {
   restaurantId: string
   item: OwnerMenuItemDTO
@@ -55,6 +59,9 @@ export function ItemRow({
   /** Só administrador edita. O nome, o preço e a miniatura continuam à vista
       de qualquer membro — consultar preço no salão é uso real. */
   canEdit: boolean
+  canReorder?: boolean
+  reorderMode?: boolean
+  presentation?: 'list' | 'grid'
 }) {
   const [pending, startTransition] = useTransition()
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -62,6 +69,11 @@ export function ItemRow({
   // Atualização otimista: no meio do serviço, esperar a ida e volta ao
   // servidor para ver o interruptor mudar é inaceitável.
   const [available, setAvailable] = useOptimistic(item.isAvailable)
+  const touchStartX = useRef<number | null>(null)
+  const touchStartY = useRef<number | null>(null)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressFired = useRef(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   // A primeira mídia por POSIÇÃO, e não a primeira imagem. É ela que abre o
   // prato no feed desde a Fase 4 — se o dono pôs o vídeo na frente, a lista
@@ -122,8 +134,75 @@ export function ItemRow({
     )
   }
 
+  function toggleVisibility() {
+    const next = !item.isVisible
+    run(() => updateItemAction({
+      itemId: item.id,
+      categoryId: item.categoryId,
+      name: item.name,
+      description: item.description ?? undefined,
+      basePriceCents: item.basePriceCents,
+      dietaryTags: item.dietaryTags,
+      isVisible: next,
+      isAvailable: item.isAvailable,
+    }), next ? 'Item exibido no cardápio' : 'Item ocultado')
+  }
+
+  function moveToCategory(categoryId: string) {
+    const target = categories.find((category) => category.id === categoryId)
+    if (!target) return
+    run(async () => {
+      const updated = await updateItemAction({
+        itemId: item.id,
+        categoryId,
+        name: item.name,
+        description: item.description ?? undefined,
+        basePriceCents: item.basePriceCents,
+        dietaryTags: item.dietaryTags,
+        isVisible: item.isVisible,
+        isAvailable: item.isAvailable,
+      })
+      if (!updated.ok) return updated
+      if (all.length > 1) {
+        const sourceOrder = await reorderItemsAction({
+          restaurantId,
+          order: all.filter((entry) => entry.id !== item.id).map((entry, position) => ({ id: entry.id, position })),
+        })
+        if (!sourceOrder.ok) return sourceOrder
+      }
+      return reorderItemsAction({
+        restaurantId,
+        order: [...target.items, item].map((entry, position) => ({ id: entry.id, position })),
+      })
+    }, 'Item movido de categoria')
+  }
+
+  function onTouchStart(event: React.TouchEvent<HTMLDivElement>) {
+    if (!canEdit || reorderMode || presentation === 'grid' || (event.target as HTMLElement).closest('button,input,[role="switch"],a')) return
+    touchStartX.current = event.touches[0]?.clientX ?? null
+    touchStartY.current = event.touches[0]?.clientY ?? null
+    longPressFired.current = false
+    longPressTimer.current = setTimeout(() => { longPressFired.current = true; setMenuOpen(true) }, 480)
+  }
+
+  function onTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current)
+    longPressTimer.current = null
+    if (longPressFired.current) { touchStartX.current = null; touchStartY.current = null; return }
+    const startX = touchStartX.current
+    const startY = touchStartY.current
+    touchStartX.current = null
+    touchStartY.current = null
+    if (startX === null || startY === null) return
+    const deltaX = event.changedTouches[0].clientX - startX
+    const deltaY = event.changedTouches[0].clientY - startY
+    if (Math.abs(deltaX) < 80 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return
+    if (deltaX > 0) toggleAvailability(!available)
+    else if (deltaX <= -88) setDeleteOpen(true)
+  }
+
   return (
-    <div className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 border-b border-border/60 px-4 py-2.5 last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+    <div className={`${presentation === 'grid' ? 'tv-menu-item-card' : 'tv-menu-item-row'}${reorderMode ? ' is-reordering' : ''}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => { if (longPressTimer.current) clearTimeout(longPressTimer.current); longPressTimer.current = null; touchStartX.current = null; touchStartY.current = null }}>
       {/* Miniatura com img simples, não next/image: o CMS não é a superfície
           crítica de desempenho. (O motivo original — remotePatterns não
           configurado — deixou de valer na Fase 4, mas a escolha continua
@@ -139,18 +218,18 @@ export function ItemRow({
           width={40}
           height={40}
           loading="lazy"
-          className="size-10 shrink-0 rounded-lg object-cover"
+          className={presentation === 'grid' ? 'tv-menu-item-image' : 'size-10 shrink-0 rounded-lg object-cover'}
           style={{
             objectPosition: `${thumb.focalX * 100}% ${thumb.focalY * 100}%`,
           }}
         />
       ) : (
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+          <span className={presentation === 'grid' ? 'tv-menu-item-image tv-menu-item-placeholder' : 'flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground'}>
           <RiImageLine className="size-4" aria-hidden="true" />
         </span>
       )}
 
-      <div className="min-w-0">
+      <div className="tv-menu-item-copy min-w-0">
         <p className="truncate text-sm font-medium">
           {item.name}
           {!item.isVisible ? (
@@ -168,11 +247,14 @@ export function ItemRow({
             </span>
           ) : null}
         </p>
+        {item.description ? <p className="tv-menu-item-description">{item.description}</p> : null}
+        {item.dietaryTags.length ? <div className="tv-menu-item-tags">{item.dietaryTags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
         <p className="text-xs text-muted-foreground">
-          {formatPriceBRL(item.basePriceCents)}
-          {item.variants.length > 0
-            ? ` · ${item.variants.length} ${item.variants.length === 1 ? 'variação' : 'variações'}`
-            : ''}
+          {item.variants.length > 0 ? 'A partir de ' : null}
+          <span className={available ? '' : 'line-through opacity-60'}>{formatPriceBRL(item.basePriceCents)}</span>
+        </p>
+        <p className="tv-menu-item-meta">
+          {item.media.filter((media) => media.kind === 'image').length} fotos · {item.media.filter((media) => media.kind === 'video').length} vídeos · {item.variants.length} {item.variants.length === 1 ? 'variação' : 'variações'}
         </p>
       </div>
 
@@ -199,7 +281,7 @@ export function ItemRow({
           </span>
         )}
 
-        {canEdit ? (
+        {canEdit && canReorder ? (
           <ReorderButtons
             label={`item ${item.name}`}
             isFirst={index === 0}
@@ -211,7 +293,7 @@ export function ItemRow({
         ) : null}
 
         {canEdit ? (
-          <DropdownMenu>
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger
               render={
                 <Button
@@ -228,6 +310,13 @@ export function ItemRow({
                 <RiPencilLine className="size-4" />
                 Editar
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toggleAvailability(!available)}>
+                {available ? 'Marcar como esgotado' : 'Marcar como disponível'}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={toggleVisibility}>
+                {item.isVisible ? 'Ocultar' : 'Mostrar'}
+              </DropdownMenuItem>
+              {categories.filter((category) => category.id !== item.categoryId).map((category) => <DropdownMenuItem key={category.id} onClick={() => moveToCategory(category.id)}>Mover para {category.name}</DropdownMenuItem>)}
               <DropdownMenuItem onClick={() => setDeleteOpen(true)}>
                 <RiDeleteBinLine className="size-4" />
                 Excluir

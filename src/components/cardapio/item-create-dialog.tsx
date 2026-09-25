@@ -31,6 +31,7 @@ import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { toast } from '@/components/ui/toast'
 import { createItemAction } from '@/server/actions/menu'
+import { DietaryTagsInput } from './dietary-tags-input'
 
 export function ItemCreateDialog({
   restaurantId,
@@ -45,7 +46,10 @@ export function ItemCreateDialog({
 }) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [dietaryTags, setDietaryTags] = useState<string[]>([])
   const [discardAlertOpen, setDiscardAlertOpen] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const gripTouchY = useRef<number | null>(null)
   const editorRef = useRef<MediaEditorHandle>(null)
 
   async function submit(formData: FormData) {
@@ -65,8 +69,9 @@ export function ItemCreateDialog({
       restaurantId,
       categoryId,
       name: formData.get('name'),
+      description: formData.get('description') || undefined,
       basePriceCents: cents,
-      dietaryTags: [],
+      dietaryTags,
     })
 
     if (!result.ok) {
@@ -114,8 +119,12 @@ export function ItemCreateDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="flex h-[min(720px,calc(100dvh-1.5rem))] max-h-[calc(100dvh-1.5rem)] w-[min(900px,calc(100vw-1.5rem))] max-w-[900px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[900px] max-sm:h-[calc(100dvh-1rem)] max-sm:max-h-[calc(100dvh-1rem)] max-sm:max-w-[calc(100%-1rem)]">
+        <DialogContent className={`tv-item-sheet flex h-[min(720px,calc(100dvh-1.5rem))] max-h-[calc(100dvh-1.5rem)] w-[min(560px,calc(100vw-1.5rem))] max-w-[560px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[560px] max-sm:h-[calc(100dvh-1rem)] max-sm:max-h-[calc(100dvh-1rem)] max-sm:max-w-[calc(100%-1rem)]${expanded ? ' is-expanded' : ''}`}>
           <DialogHeader className="shrink-0 border-b border-border px-5 py-4 pr-14 sm:px-6">
+            <div className="tv-sheet-grip" onTouchStart={(event) => { gripTouchY.current = event.touches[0]?.clientY ?? null }} onTouchEnd={(event) => { const start = gripTouchY.current; gripTouchY.current = null; if (start === null) return; const delta = start - event.changedTouches[0].clientY; if (delta > 70) setExpanded(true); else if (delta < -110) handleOpenChange(false) }}>
+              <span aria-hidden="true" />
+              <button type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? 'Reduzir' : 'Expandir'}</button>
+            </div>
             <DialogTitle>Novo item</DialogTitle>
             <DialogDescription>
               Escolha as fotos e os vídeos agora; o envio começa ao criar o item.
@@ -123,8 +132,8 @@ export function ItemCreateDialog({
           </DialogHeader>
 
           <form action={submit} className="flex min-h-0 flex-1 flex-col">
-            <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-              <section className="border-b border-border p-5 sm:p-6 lg:border-r lg:border-b-0">
+            <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-1">
+              <section className="order-2 border-b border-border p-5 sm:p-6">
                 <div className="mb-4">
                   <h3 className="text-sm font-semibold">Dados básicos</h3>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -143,6 +152,15 @@ export function ItemCreateDialog({
                     />
                   </Field>
                   <Field>
+                    <FieldLabel htmlFor="item-description">Descrição</FieldLabel>
+                    <textarea id="item-description" name="description" maxLength={600} rows={3} className="tv-menu-textarea" />
+                    <FieldDescription className="text-xs">Até 600 caracteres.</FieldDescription>
+                  </Field>
+                  <Field>
+                    <FieldLabel>Destaques e restrições</FieldLabel>
+                    <DietaryTagsInput value={dietaryTags} onChange={setDietaryTags} />
+                  </Field>
+                  <Field>
                     <FieldLabel htmlFor="item-price">Preço</FieldLabel>
                     <Input
                       id="item-price"
@@ -156,7 +174,7 @@ export function ItemCreateDialog({
                 </FieldGroup>
               </section>
 
-              <section className="bg-surface-1/45 p-5 sm:p-6">
+              <section className="order-1 bg-surface-1/45 p-5 sm:p-6">
                 <div className="mb-3">
                   <h3 className="text-sm font-semibold">Fotos e vídeos</h3>
                   <p className="mt-1 text-xs text-muted-foreground">

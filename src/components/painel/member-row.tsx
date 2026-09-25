@@ -30,9 +30,11 @@ import {
 export function MemberRow({
   member,
   variant = 'row',
+  isSelf = false,
 }: {
   member: MemberDTO
   variant?: 'row' | 'card'
+  isSelf?: boolean
 }) {
   const [pending, startTransition] = useTransition()
   const [papel, setPapel] = useState<MemberRole>(member.role)
@@ -122,7 +124,7 @@ export function MemberRow({
         <div className="mt-4 grid gap-3 border-t border-border/60 pt-4">
           <NativeSelect
             value={papel}
-            disabled={pending}
+            disabled={pending || isSelf}
             aria-label={`Papel de ${member.email ?? member.displayName ?? 'membro'}`}
             onChange={(event) => trocarPapel(event.target.value as MemberRole)}
           >
@@ -132,11 +134,11 @@ export function MemberRow({
           </NativeSelect>
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs text-muted-foreground">
-              Desde {new Date(member.joinedAt).toLocaleDateString('pt-BR')}
+              {isSelf ? 'Você · ' : 'Desde '}{new Date(member.joinedAt).toLocaleDateString('pt-BR')}
             </span>
-            <Button variant="ghost" size="sm" disabled={pending} onClick={() => setRemoveOpen(true)}>
+            {isSelf ? <span className="text-xs font-medium text-muted-foreground">Seu acesso</span> : <Button variant="ghost" size="sm" disabled={pending} onClick={() => setRemoveOpen(true)}>
               <RiDeleteBinLine className="size-4" /> Remover
-            </Button>
+            </Button>}
           </div>
         </div>
         {removeDialog}
@@ -175,7 +177,7 @@ export function MemberRow({
       <TableCell>
         <NativeSelect
           value={papel}
-          disabled={pending}
+          disabled={pending || isSelf}
           aria-label={`Papel de ${member.email ?? member.displayName ?? 'membro'}`}
           onChange={(event) => trocarPapel(event.target.value as MemberRole)}
         >
@@ -192,7 +194,7 @@ export function MemberRow({
       </TableCell>
 
       <TableCell>
-        <Button
+        {!isSelf ? <Button
           variant="ghost"
           size="sm"
           disabled={pending}
@@ -200,7 +202,7 @@ export function MemberRow({
         >
           <RiDeleteBinLine className="size-4" />
           Remover
-        </Button>
+        </Button> : <span className="text-xs text-muted-foreground">Você</span>}
 
         {/* Irmão do botão, controlado por estado. Diálogo montado dentro de
             menu suspenso some junto com o menu e nunca chega a aparecer. */}

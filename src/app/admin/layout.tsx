@@ -18,9 +18,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const config = getConsoleConfig(user)
   const [invites, restaurants] = await Promise.all([getCachedPlatformInvites(), getCachedAdminRestaurants()])
   const pendingCount = invites.filter((invite) => inviteState(invite) === 'pending').length
+  const consoleConfig = { ...config, counts: { pendingInvites: pendingCount, restaurants: restaurants.length } }
   return (
     <div className="territorio-admin min-h-dvh">
-      <ConsoleShell leaves={config.leaves} email={config.userLabel} initialRail={initialRail} counts={{ pendingInvites: pendingCount, restaurants: restaurants.length }}>
+      <ConsoleShell config={consoleConfig} initialRail={initialRail}>
         {children}
       </ConsoleShell>
     </div>

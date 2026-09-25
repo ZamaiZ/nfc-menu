@@ -27,6 +27,7 @@ export default async function Page({
   return (
     <main className="tavvi-page">
       <PageHeader
+        className="tv-page-header"
         eyebrow="Personalização"
         title="Identidade"
         description="Defina a marca, as cores e a atmosfera que o cliente encontra no cardápio."

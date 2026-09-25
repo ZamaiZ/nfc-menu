@@ -5,14 +5,16 @@ export function PageHeader({
   title,
   description,
   actions,
+  className,
 }: {
   eyebrow?: string
   title: string
   description?: string
   actions?: React.ReactNode
+  className?: string
 }) {
   return (
-    <header className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+    <header className={`mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end ${className ?? ''}`}>
       <div className="min-w-0 max-w-2xl">
         {eyebrow ? (
           <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-primary">

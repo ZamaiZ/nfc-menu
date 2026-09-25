@@ -13,6 +13,10 @@ export default function Loading() {
         <Skeleton className="h-9 w-36 rounded-4xl" />
       </div>
 
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[0, 1, 2, 3].map((role) => <div key={role} className="tavvi-surface space-y-3 p-4"><Skeleton className="h-4 w-28" /><Skeleton className="h-8 w-full" /><Skeleton className="h-6 w-20 rounded-full" /></div>)}
+      </div>
+
       <div className="tavvi-surface space-y-2 p-3">
         {[0, 1, 2].map((membro) => (
           <div

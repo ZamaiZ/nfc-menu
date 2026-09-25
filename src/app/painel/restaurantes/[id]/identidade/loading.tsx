@@ -11,7 +11,8 @@ export default function Loading() {
         <Skeleton className="h-4 w-80" />
       </div>
 
-      <div className="tavvi-surface max-w-[840px] space-y-6 p-5 sm:p-6">
+      <div className="tv-identity-layout">
+      <div className="tavvi-surface space-y-6 p-5 sm:p-6">
           {/* Logo e capa. */}
           <div className="grid gap-6 sm:grid-cols-[auto_minmax(0,1fr)]">
             <div className="space-y-2">
@@ -51,6 +52,11 @@ export default function Loading() {
               </div>
             ))}
           </div>
+      </div>
+      <aside className="tv-identity-preview tavvi-surface p-4">
+        <Skeleton className="mb-4 h-8 w-full" />
+        <Skeleton className="mx-auto h-[484px] w-[236px] rounded-[30px]" />
+      </aside>
       </div>
     </main>
   )
