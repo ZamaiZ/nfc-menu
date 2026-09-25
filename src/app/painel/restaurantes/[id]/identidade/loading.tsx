@@ -53,10 +53,6 @@ export default function Loading() {
             ))}
           </div>
       </div>
-      <aside className="tv-identity-preview tavvi-surface p-4">
-        <Skeleton className="mb-4 h-8 w-full" />
-        <Skeleton className="mx-auto h-[484px] w-[236px] rounded-[30px]" />
-      </aside>
       </div>
     </main>
   )

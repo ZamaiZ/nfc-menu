@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation'
 import { ProfileForm } from '@/components/painel/profile-form'
-import { ThemePreview } from '@/components/painel/theme-preview'
 import { PageHeader } from '@/components/shell/page-header'
 import { uuidSchema } from '@/domain/common'
 import { requireRestaurantAdmin } from '@/server/dal/auth'
@@ -35,19 +34,13 @@ export default async function Page({
         title="Nome e contato"
         description="Estes dados aparecem no topo do cardápio e ajudam o cliente a encontrar ou chamar o restaurante."
       />
-      <div className="tv-contact-layout">
-        <ProfileForm
-          restaurantId={restaurant.id}
-          name={restaurant.name}
-          description={restaurant.description}
-          contact={restaurant.contact}
-        />
-        <aside className="tv-contact-preview tavvi-surface p-4">
-          <h2 className="text-sm font-semibold">No topo do cardápio</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Prévia com as cores e a tipografia da Identidade.</p>
-          <div className="mt-4"><ThemePreview theme={previewTheme} name={restaurant.name} mode="light" /></div>
-        </aside>
-      </div>
+      <ProfileForm
+        restaurantId={restaurant.id}
+        name={restaurant.name}
+        description={restaurant.description}
+        contact={restaurant.contact}
+        theme={previewTheme}
+      />
     </main>
   )
 }

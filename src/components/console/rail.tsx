@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { LuBookOpen, LuContact, LuMail, LuPalette, LuPanelLeftClose, LuSearch, LuStore, LuUsers } from 'react-icons/lu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { ConsoleLeaf } from './console-config'
-import { isConsoleRouteActive } from './console-config'
+import { getActiveConsoleLeaf } from './console-config'
 import { setRailMode, type RailMode } from './rail-store'
 
 const ICONS = { mail: LuMail, store: LuStore, menu: LuBookOpen, palette: LuPalette, contact: LuContact, team: LuUsers } as const
@@ -37,6 +37,7 @@ export function Rail({
   onNavigate: (leaf: ConsoleLeaf) => void
 }) {
   const pathname = usePathname()
+  const activeLeaf = getActiveConsoleLeaf(pathname, leaves)
   const expanded = mode === 'pinned'
   return (
     <aside className={`tv-console-rail${expanded ? ' is-pinned' : ''}`}>
@@ -52,7 +53,7 @@ export function Rail({
       >
         {leaves.map((leaf) => {
           const Icon = ICONS[leaf.icon]
-          const active = isConsoleRouteActive(pathname, leaf)
+          const active = activeLeaf?.key === leaf.key
           const link = (
             <Link key={leaf.key} href={leaf.href} onClick={() => onNavigate(leaf)} aria-current={active ? 'page' : undefined} aria-label={!expanded ? leaf.label : undefined} className={`tv-rail-link${active ? ' is-active' : ''}`}>
               <span className="tv-rail-icon"><Icon aria-hidden="true" /></span>

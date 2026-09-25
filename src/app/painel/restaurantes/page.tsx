@@ -2,17 +2,11 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { RiStore2Line } from 'react-icons/ri'
 import { StatusBadge } from '@/components/admin/status-badge'
+import { PanelEmptyState } from '@/components/painel/panel-empty-state'
 import { TavviShell } from '@/components/shell/tavvi-shell'
 import { getPanelNavigation } from '@/components/shell/navigation'
 import { PageHeader } from '@/components/shell/page-header'
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from '@/components/ui/empty'
 import { publicMediaUrl } from '@/lib/media-url'
 import { getCurrentUser, requireUser } from '@/server/dal/auth'
 import { listMyRestaurants } from '@/server/dal/restaurants'
@@ -59,17 +53,12 @@ export default async function Page() {
         />
 
         {restaurants.length === 0 ? (
-          <Empty className="tavvi-surface min-h-[360px]">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <RiStore2Line />
-              </EmptyMedia>
-              <EmptyTitle>Nenhum restaurante ainda</EmptyTitle>
-              <EmptyDescription>
-                Peça um convite para quem administra a plataforma.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+          <PanelEmptyState
+            density="page"
+            icon={<RiStore2Line />}
+            title="Nenhum restaurante ainda"
+            description="Peça um convite para quem administra a plataforma."
+          />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {restaurants.map((restaurant) => (

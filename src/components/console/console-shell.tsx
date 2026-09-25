@@ -9,7 +9,7 @@ import { MobileDock } from './mobile-dock'
 import { Rail } from './rail'
 import { InviteSheet } from './invites/invite-sheet'
 import { toggleRailMode, useRailMode, type RailMode } from './rail-store'
-import { isConsoleRouteActive, type ConsoleConfig, type ConsoleLeaf } from './console-config'
+import { getActiveConsoleLeaf, type ConsoleConfig, type ConsoleLeaf } from './console-config'
 
 type ConsoleActionValue = { openInvite: (email?: string, inviteId?: string) => void }
 const ConsoleActionsContext = createContext<ConsoleActionValue>({ openInvite: () => undefined })
@@ -38,7 +38,8 @@ export function ConsoleShell({
   const [accountOpen, setAccountOpen] = useState(false)
   const [inviteRequest, setInviteRequest] = useState<{ email?: string; inviteId?: string } | null>(null)
   const moveRef = useRef<(left: number, cy: number, instant?: boolean) => void>(() => undefined)
-  const activeIndex = Math.max(0, leaves.findIndex((leaf) => isConsoleRouteActive(pathname, leaf)))
+  const activeLeaf = getActiveConsoleLeaf(pathname, leaves)
+  const activeIndex = Math.max(0, leaves.findIndex((leaf) => leaf.key === activeLeaf?.key))
   const openInvite = useCallback((prefillEmail?: string, inviteId?: string) => setInviteRequest({ email: prefillEmail, inviteId }), [])
   const context = useMemo(() => ({ openInvite }), [openInvite])
   const setMove = useCallback((move: (left: number, cy: number, instant?: boolean) => void) => { moveRef.current = move }, [])

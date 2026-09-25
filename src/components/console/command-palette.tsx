@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { LuArrowRight, LuPlus, LuSearch, LuSunMoon, LuX } from 'react-icons/lu'
 import { useTheme } from '@/components/theme/theme-provider'
 import type { ConsoleLeaf } from './console-config'
-import { isConsoleRouteActive } from './console-config'
+import { getActiveConsoleLeaf } from './console-config'
 import { usePathname, useRouter } from 'next/navigation'
 
 export function CommandPalette({ leaves, open, onClose, onNewInvite }: {
@@ -19,6 +19,7 @@ export function CommandPalette({ leaves, open, onClose, onNewInvite }: {
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const pathname = usePathname()
+  const activeLeaf = getActiveConsoleLeaf(pathname, leaves)
   const { theme, setTheme } = useTheme()
   const rows = useMemo(() => {
     const pages = leaves.map((leaf) => ({ key: leaf.key, label: leaf.label, type: 'Página', href: leaf.href, leaf }))
@@ -56,7 +57,7 @@ export function CommandPalette({ leaves, open, onClose, onNewInvite }: {
       <div role="listbox" aria-label="Resultados" className="tv-command-results">
         {rows.length ? rows.map((row, index) => {
           const selected = index === active
-          if ('href' in row) return <Link key={row.key} href={row.href} role="option" aria-selected={selected} aria-current={isConsoleRouteActive(pathname, row.leaf) ? 'page' : undefined} className={`tv-command-row${selected ? ' is-selected' : ''}`} onClick={onClose}><span>{row.label}</span><small>{row.type}</small></Link>
+          if ('href' in row) return <Link key={row.key} href={row.href} role="option" aria-selected={selected} aria-current={activeLeaf?.key === row.leaf.key ? 'page' : undefined} className={`tv-command-row${selected ? ' is-selected' : ''}`} onClick={onClose}><span>{row.label}</span><small>{row.type}</small></Link>
           const Icon = row.key === 'theme' ? LuSunMoon : LuPlus
           return <button key={row.key} type="button" role="option" aria-selected={selected} className={`tv-command-row${selected ? ' is-selected' : ''}`} onClick={() => { row.action(); onClose() }}><span><Icon aria-hidden="true" />{row.label}</span><small>{row.type}<LuArrowRight /></small></button>
         }) : <p className="tv-command-empty">Nada encontrado.</p>}

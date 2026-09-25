@@ -7,7 +7,7 @@ import { LuBookOpen, LuContact, LuHouse, LuMenu, LuMoon, LuPalette, LuSun, LuMon
 import { useTheme, type Theme } from '@/components/theme/theme-provider'
 import { signOutAction } from '@/server/actions/auth'
 import type { ConsoleLeaf } from './console-config'
-import { isConsoleRouteActive } from './console-config'
+import { getActiveConsoleLeaf } from './console-config'
 
 const themes: Record<Theme, { label: string; Icon: typeof LuSun }> = {
   system: { label: 'Sistema', Icon: LuMonitor },
@@ -21,6 +21,7 @@ export function MobileDock({ leaves, email, description, counts, homeHref }: { l
   const panelRef = useRef<HTMLDivElement>(null)
   const { theme, setTheme } = useTheme()
   const pathname = usePathname()
+  const activeLeaf = getActiveConsoleLeaf(pathname, leaves)
   const [systemDark, setSystemDark] = useState(false)
   const activeTheme = themes[theme]
   const cycleTheme = () => setTheme(theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system')
@@ -58,7 +59,7 @@ export function MobileDock({ leaves, email, description, counts, homeHref }: { l
         <div className="tv-mobile-menu-head"><span>NAVEGAÇÃO</span><button type="button" className="tv-icon-button" aria-label="Fechar navegação" onClick={() => setPanel(null)}><LuX /></button></div>
         {links.map(({ leaf, Icon }) => {
           const count = leaf.key === 'convites' ? `${counts.pendingInvites} pendentes` : leaf.key === 'restaurantes' ? counts.restaurants : null
-          return <Link key={leaf.key} href={leaf.href} onClick={() => setPanel(null)} className={`tv-mobile-nav-row${isConsoleRouteActive(pathname, leaf) ? ' is-active' : ''}`}><span className="tv-mobile-nav-icon"><Icon /></span><span><strong>{leaf.label}</strong><small>{leaf.sub}</small></span>{count !== null && <span className="tv-mobile-nav-count">{count}</span>}</Link>
+          return <Link key={leaf.key} href={leaf.href} onClick={() => setPanel(null)} className={`tv-mobile-nav-row${activeLeaf?.key === leaf.key ? ' is-active' : ''}`}><span className="tv-mobile-nav-icon"><Icon /></span><span><strong>{leaf.label}</strong><small>{leaf.sub}</small></span>{count !== null && <span className="tv-mobile-nav-count">{count}</span>}</Link>
         })}
       </>}
     </div></>}

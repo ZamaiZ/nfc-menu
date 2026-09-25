@@ -109,12 +109,27 @@ export function isConsoleLeaf(node: ConsoleNode): node is ConsoleLeaf {
   return node.kind === 'leaf'
 }
 
-export function isConsoleRouteActive(pathname: string, leaf: ConsoleLeaf) {
-  if (leaf.href === '/' && pathname === '/') return true
-  if (leaf.href !== '/' && (pathname === leaf.href || pathname.startsWith(`${leaf.href}/`))) {
-    return true
+function routePrefixMatches(pathname: string, prefix: string) {
+  const route = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+  const normalizedPrefix = prefix.length > 1 ? prefix.replace(/\/+$/, '') : prefix
+  if (normalizedPrefix === '/') return route === '/'
+  return route === normalizedPrefix || route.startsWith(`${normalizedPrefix}/`)
+}
+
+export function getActiveConsoleLeaf(pathname: string, leaves: ConsoleLeaf[]) {
+  let activeLeaf: ConsoleLeaf | undefined
+  let activeSpecificity = -1
+
+  for (const leaf of leaves) {
+    const specificity = [leaf.href, ...leaf.activeMatch]
+      .filter((prefix) => routePrefixMatches(pathname, prefix))
+      .reduce((longest, prefix) => Math.max(longest, prefix === '/' ? 1 : prefix.length), -1)
+
+    if (specificity > activeSpecificity) {
+      activeLeaf = leaf
+      activeSpecificity = specificity
+    }
   }
-  return leaf.activeMatch.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  )
+
+  return activeLeaf
 }

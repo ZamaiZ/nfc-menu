@@ -4,9 +4,9 @@ import { useMemo, useState, useTransition } from 'react'
 import {
   RiArrowGoBackLine,
   RiCheckLine,
-  RiSmartphoneLine,
 } from 'react-icons/ri'
 import { BrandImages } from '@/components/painel/brand-images'
+import { FloatingRestaurantPreview } from '@/components/painel/floating-restaurant-preview'
 import { ThemePreview } from '@/components/painel/theme-preview'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
@@ -60,8 +60,6 @@ export function IdentityForm({
   const [tocouAccent, setTocouAccent] = useState(false)
   const [accentAceito, setAccentAceito] = useState(false)
   const [pending, startTransition] = useTransition()
-  const [previewOpen, setPreviewOpen] = useState(true)
-  const [previewMode, setPreviewMode] = useState<'light' | 'dark'>('light')
 
   const preset = PRESETS[escolha.preset]
   const baseAtual = escolha.base ?? preset.light.base
@@ -401,21 +399,9 @@ export function IdentityForm({
         </div>
       </div>
 
-      <aside className={`tv-identity-preview${previewOpen ? ' is-open' : ''}`}>
-        <div className="tv-identity-preview-head">
-          <div><h2>Prévia do cardápio</h2><p>Atualizada conforme você edita o tema.</p></div>
-          <Button type="button" variant="outline" size="sm" onClick={() => setPreviewOpen((open) => !open)} aria-expanded={previewOpen} aria-controls="identity-preview-panel">
-            <RiSmartphoneLine className="size-4" />{previewOpen ? 'Recolher' : 'Ver'}
-          </Button>
-        </div>
-        <div id="identity-preview-panel" className="tv-identity-preview-body">
-          <div className="tv-identity-mode" role="group" aria-label="Aparência da prévia">
-            <button type="button" aria-pressed={previewMode === 'light'} onClick={() => setPreviewMode('light')}>Claro</button>
-            <button type="button" aria-pressed={previewMode === 'dark'} onClick={() => setPreviewMode('dark')}>Escuro</button>
-          </div>
-          <ThemePreview theme={escolha} name={name} mode={previewMode} />
-        </div>
-      </aside>
+      <FloatingRestaurantPreview
+        renderPreview={(mode) => <ThemePreview theme={escolha} name={name} mode={mode} />}
+      />
     </div>
   )
 }

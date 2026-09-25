@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { LuArrowDownUp, LuGrid2X2, LuList, LuPlus, LuSearch } from 'react-icons/lu'
+import { LuArrowDownUp, LuGrid2X2, LuList, LuSearch } from 'react-icons/lu'
+import { RiBookOpenLine, RiFolderAddLine, RiSearchLine } from 'react-icons/ri'
 import type { OwnerMenuCategoryDTO } from '@/domain/menu'
 import type { RestaurantStatus } from '@/domain/restaurant'
 import { CategorySection } from '@/components/cardapio/category-section'
@@ -11,6 +12,8 @@ import { NewCategoryButton } from '@/components/cardapio/new-category-button'
 import { NewItemButton } from '@/components/cardapio/new-item-button'
 import { PublishBar } from './publish-bar'
 import { MenuWorkModes, type MenuWorkMode } from '@/components/cardapio/menu-work-modes'
+import { Button } from '@/components/ui/button'
+import { PanelEmptyState } from './panel-empty-state'
 
 type MenuView = 'list' | 'index' | 'grid' | MenuWorkMode
 type MenuFilter = 'all' | 'media' | 'unavailable' | 'hidden'
@@ -160,15 +163,29 @@ export function MenuWorkspace({
           ] as const).map(([value, label]) => <button key={value} type="button" className={filter === value ? 'is-active' : ''} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}<span>{counts[value]}</span></button>)}
         </div> : null}
 
-        {workMode ? <MenuWorkModes mode={view as MenuWorkMode} restaurantId={restaurantId} categories={categories} canEdit={canEdit} /> : categories.length === 0 ? (
-          <div className="tv-menu-empty">
-            <div className="tv-menu-empty-mark"><LuPlus aria-hidden="true" /></div>
-            <h2>Seu cardápio começa aqui.</h2>
-            <p>Crie uma categoria e organize os primeiros pratos.</p>
-            {canEdit ? <div className="tv-menu-quick-categories">{['Entradas', 'Pratos principais', 'Bebidas', 'Sobremesas'].map((name) => <NewCategoryButton key={name} restaurantId={restaurantId} label={name} initialName={name} variant="outline" />)}</div> : <p>O administrador ainda não montou o cardápio.</p>}
-          </div>
+        {workMode ? <MenuWorkModes
+          mode={view as MenuWorkMode}
+          restaurantId={restaurantId}
+          categories={categories}
+          canEdit={canEdit}
+          onManageHiddenItems={() => { setQuery(''); chooseView('list'); setFilter('hidden') }}
+          onReviewMenu={() => { setQuery(''); chooseView('list'); setFilter('all') }}
+        /> : categories.length === 0 ? (
+          <PanelEmptyState
+            density="page"
+            icon={<RiBookOpenLine />}
+            title="Seu cardápio começa aqui"
+            description={canEdit ? 'Crie uma categoria e organize os primeiros pratos.' : 'O administrador ainda não montou o cardápio.'}
+            action={canEdit ? <div className="tv-menu-quick-categories">{['Entradas', 'Pratos principais', 'Bebidas', 'Sobremesas'].map((name) => <NewCategoryButton key={name} restaurantId={restaurantId} label={name} initialName={name} variant="outline" />)}</div> : undefined}
+          />
         ) : filteredCategories.length === 0 ? (
-          <div className="tv-menu-empty is-compact"><h2>Nenhum item encontrado.</h2><p>Ajuste a busca ou escolha outro filtro.</p></div>
+          <PanelEmptyState
+            density="section"
+            icon={<RiSearchLine />}
+            title="Nenhum item encontrado"
+            description="Tente outra busca ou limpe os filtros para voltar a ver o cardápio."
+            action={<Button type="button" variant="outline" size="sm" onClick={() => { setQuery(''); setFilter('all') }}>Limpar busca e filtros</Button>}
+          />
         ) : (
           <div className={view === 'index' ? 'tv-menu-index-layout' : undefined}>
             {view === 'index' ? <nav className="tv-menu-index" aria-label="Índice de categorias">{filteredCategories.map((category) => <a key={category.id} href={`#categoria-${category.id}`}><span>{category.name}</span><small>{category.items.length}</small></a>)}</nav> : null}
@@ -187,7 +204,13 @@ export function MenuWorkspace({
                 canReorder={showReorder}
               >
                 {categoryItems.length === 0 ? (
-                  <div className="tv-menu-category-empty"><p>{category.isVisible ? 'Esta categoria ainda não tem itens e não aparece no cardápio público.' : 'Categorias vazias não aparecem no cardápio público.'}</p>{canEdit ? <NewItemButton restaurantId={restaurantId} categoryId={category.id} label="Adicionar primeiro item" variant="outline" /> : null}</div>
+                  <PanelEmptyState
+                    density="compact"
+                    icon={<RiFolderAddLine />}
+                    title="Categoria sem itens"
+                    description={category.isVisible ? 'Esta categoria ainda está vazia e não aparece no cardápio público.' : 'Categorias vazias não aparecem no cardápio público.'}
+                    action={canEdit ? <NewItemButton restaurantId={restaurantId} categoryId={category.id} label="Adicionar primeiro item" variant="outline" /> : undefined}
+                  />
                 ) : (
                   <>
                     {categoryItems.map((item) => {

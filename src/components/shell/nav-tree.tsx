@@ -10,7 +10,7 @@ import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { getActiveHref, isGroupActive, isHrefActive } from './navigation'
+import { getActiveHref, isGroupActive } from './navigation'
 import { getNavIcon } from './navigation-icons'
 import type { NavGroup, NavItem, NavLeaf } from './navigation.types'
 
@@ -323,7 +323,7 @@ function NavChildLink({
 function NavLeafRow({
   item,
   index,
-  pathname,
+  activeHref,
   density,
   collapsed,
   animate,
@@ -331,14 +331,14 @@ function NavLeafRow({
 }: {
   item: NavLeaf
   index: number
-  pathname: string
+  activeHref: string | undefined
   density: NavTreeDensity
   collapsed: boolean
   animate: boolean
   onNavigate?: () => void
 }) {
   const Icon = getNavIcon(item.icon)
-  const isActive = !item.disabled && isHrefActive(pathname, item.href)
+  const isActive = !item.disabled && activeHref === item.href
 
   if (density === 'sheet') {
     const content = (
@@ -842,6 +842,8 @@ export function NavTree({
   animate = false,
   onNavigate,
 }: NavTreeProps) {
+  const activeHref = getActiveHref(pathname, items)
+
   return (
     <ul className="flex flex-col gap-2">
       {items.map((item, index) => (
@@ -860,7 +862,7 @@ export function NavTree({
             <NavLeafRow
               item={item}
               index={index}
-              pathname={pathname}
+              activeHref={activeHref}
               density={density}
               collapsed={collapsed}
               animate={animate}

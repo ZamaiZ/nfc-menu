@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import { InviteDialog } from '@/components/convites/invite-dialog'
 import { InviteList } from '@/components/convites/invite-list'
 import { MemberRow } from '@/components/painel/member-row'
+import { PanelEmptyState } from '@/components/painel/panel-empty-state'
+import { RiTeamLine } from 'react-icons/ri'
 import { PageHeader } from '@/components/shell/page-header'
 import {
   MEMBER_ROLE_HINTS,
@@ -71,7 +73,14 @@ export default async function Page({
         })}
       </section>
 
-      {members.length === 1 && pendentes.length === 0 ? <section className="mb-6 rounded-[22px] border border-dashed border-border p-6 text-center"><h2 className="text-base font-semibold">Só você por aqui</h2><p className="mt-2 text-sm text-muted-foreground">Convide alguém para ajudar a administrar ou consultar o cardápio.</p></section> : null}
+      {members.length === 1 && pendentes.length === 0 ? <div className="mb-6">
+        <PanelEmptyState
+          density="section"
+          icon={<RiTeamLine />}
+          title="Só você por aqui"
+          description="Convide alguém pelo botão no topo para ajudar a administrar ou consultar o cardápio."
+        />
+      </div> : null}
 
       <div className="tavvi-surface hidden overflow-hidden md:block">
       <Table>

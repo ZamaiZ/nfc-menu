@@ -2,6 +2,8 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { ContactPreview } from '@/components/painel/contact-preview'
+import { FloatingRestaurantPreview } from '@/components/painel/floating-restaurant-preview'
 import {
   RiInstagramLine,
   RiMapPinLine,
@@ -15,6 +17,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/components/ui/toast'
 import type { ActionResult } from '@/server/actions/result'
+import type { ThemeChoice } from '@/domain/theme'
 import { updateRestaurantProfileAction } from '@/server/actions/restaurants'
 
 type State = ActionResult | undefined
@@ -48,11 +51,13 @@ export function ProfileForm({
   name,
   description,
   contact,
+  theme,
 }: {
   restaurantId: string
   name: string
   description: string | null
   contact: Record<string, string>
+  theme: ThemeChoice
 }) {
   const original = useMemo<ProfileValues>(() => ({
     name,
@@ -109,6 +114,7 @@ export function ProfileForm({
   }
 
   return (
+    <>
     <form action={formAction} className="tv-profile-form space-y-4">
       <section className="tavvi-surface space-y-4 p-5 sm:p-6">
         <div><h2 className="text-lg font-semibold">Sobre</h2><p className="mt-1 text-sm text-muted-foreground">Informações que apresentam o restaurante.</p></div>
@@ -197,5 +203,18 @@ export function ProfileForm({
         </div>
       </div>
     </form>
+    <FloatingRestaurantPreview
+      renderPreview={(mode) => <ContactPreview
+        theme={theme}
+        name={values.name}
+        description={values.description}
+        phone={values.phone}
+        whatsapp={values.whatsapp}
+        instagram={values.instagram}
+        address={values.address}
+        mode={mode}
+      />}
+    />
+    </>
   )
 }

@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { RiAddLine, RiDeleteBinLine } from 'react-icons/ri'
+import { RiAddLine, RiDeleteBinLine, RiPriceTag3Line } from 'react-icons/ri'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PanelEmptyState } from '@/components/painel/panel-empty-state'
 import { Spinner } from '@/components/ui/spinner'
 import { toast } from '@/components/ui/toast'
 import type { OwnerMenuItemDTO } from '@/domain/menu'
@@ -58,9 +59,12 @@ export function VariantsEditor({
   return (
     <div className="space-y-3">
       {variants.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Sem variações. Use para tamanhos, como Pizza P, M e G.
-        </p>
+        <PanelEmptyState
+          density="compact"
+          icon={<RiPriceTag3Line />}
+          title="Sem variações por enquanto"
+          description="Cadastre tamanhos ou opções com preços próprios, como Pizza P, M e G."
+        />
       ) : (
         <ul className="space-y-1.5">
           {variants.map((variant) => (

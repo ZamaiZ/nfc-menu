@@ -1,10 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, useTransition } from 'react'
+import { RiImageLine } from 'react-icons/ri'
 import { MediaDropzone } from '@/components/cardapio/media-dropzone'
 import { MediaFocal } from '@/components/cardapio/media-focal'
 import { formatFileSize, MediaItem } from '@/components/cardapio/media-item'
 import { AttachmentGroup } from '@/components/ui/attachment'
+import { PanelEmptyState } from '@/components/painel/panel-empty-state'
 import { toast } from '@/components/ui/toast'
 import { MAX_MIDIAS_POR_ITEM as MAX_MEDIA_PER_ITEM, MEDIA_LIMITS } from '@/domain/media'
 import type { OwnerMenuItemDTO } from '@/domain/menu'
@@ -372,10 +374,12 @@ export function MediaEditor({
   return (
     <div className="space-y-3">
       {savedMedia.length === 0 && pendingMedia.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          O cardápio público é um feed de fotos. Um prato sem foto nem vídeo
-          não aparece nele — e impede a publicação.
-        </p>
+        <PanelEmptyState
+          density="compact"
+          icon={<RiImageLine />}
+          title="Este item ainda não tem mídia"
+          description="Fotos e vídeos colocam o prato no feed público e são necessários para publicar o cardápio."
+        />
       ) : (
         <AttachmentGroup className="scroll-fade-x scrollbar-none gap-2">
           {savedMedia.map((entry, index) => (
